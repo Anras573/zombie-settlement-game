@@ -13,6 +13,19 @@ body {
     touch-action: none;
 }
 
+.controls-hint {
+    position: fixed;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    margin: 0;
+    padding: 0.4rem 0.75rem;
+    background: rgba(0, 0, 0, 0.55);
+    color: #e0e0e0;
+    font: 0.85rem/1.2 sans-serif;
+    border-radius: 0.35rem;
+    pointer-events: none;
+}
+
 /* Loading indicator styles (matches Blazor WASM template) */
 .loading-progress {
     position: relative;
