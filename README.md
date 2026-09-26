@@ -37,8 +37,9 @@ dotnet build ZombieSettlementGame.slnx
 
 `src/ZombieSettlementGame.Browser` is a minimal Blazor WebAssembly host that boots the Yaeger
 engine and renders the settlement's ground plot: a 10x10 tilemap (grass interior, brick boundary
-wall) with one building (a farm plot) placed on it, viewed through a `Camera2D` that keeps tiles
-square regardless of the browser window's aspect ratio.
+wall) with three placed buildings — a farm, a house, and a fence, each a distinct entity with its
+own `BuildingKind` and sprite-sheet frame — viewed through a `Camera2D` that keeps tiles square
+regardless of the browser window's aspect ratio.
 
 ```bash
 dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj
