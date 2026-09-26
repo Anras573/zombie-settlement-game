@@ -27,15 +27,20 @@
     </div>
 
     <script>
-        // Drives the requestAnimationFrame game loop by invoking the C# Tick method.
+        // Drives the requestAnimationFrame game loop by invoking the C# Tick method. Also passes
+        // the canvas' current CSS aspect ratio each frame so Tick can build a Camera2D
+        // view-projection matched to the actual viewport — devicePixelRatio scales width and
+        // height equally, so clientWidth/clientHeight alone already give the right ratio.
         let _rafRunning = false;
 
         function startGameLoop(dotnetRef) {
             if (_rafRunning) return;
             _rafRunning = true;
+            const canvas = document.getElementById('yaeger-canvas');
             function loop(timestamp) {
                 if (!_rafRunning) return;
-                dotnetRef.invokeMethodAsync('Tick', timestamp)
+                const aspectRatio = canvas.clientHeight > 0 ? canvas.clientWidth / canvas.clientHeight : 1;
+                dotnetRef.invokeMethodAsync('Tick', timestamp, aspectRatio)
                     .then(() => { if (_rafRunning) requestAnimationFrame(loop); })
                     .catch((err) => console.error('[Yaeger] Game loop error:', err));
             }
