@@ -39,7 +39,9 @@ dotnet build ZombieSettlementGame.slnx
 engine and renders the settlement's ground plot: a 10x10 tilemap (grass interior, brick boundary
 wall) with three placed buildings — a farm, a house, and a fence, each a distinct entity with its
 own `BuildingKind` and sprite-sheet frame — viewed through a `Camera2D` that keeps tiles square
-regardless of the browser window's aspect ratio.
+regardless of the browser window's aspect ratio. Press **1**/**2**/**3** to choose a building
+type and click an empty grass cell to place it there; the click is mapped to a grid cell by
+inverting the camera's view-projection, so placement stays correct at any window size.
 
 ```bash
 dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj

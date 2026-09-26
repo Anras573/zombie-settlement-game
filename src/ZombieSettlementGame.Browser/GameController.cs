@@ -4,6 +4,8 @@ using Microsoft.JSInterop;
 using Yaeger.Browser;
 using Yaeger.ECS;
 using Yaeger.Graphics;
+using Yaeger.Input;
+using Yaeger.Platform;
 
 namespace ZombieSettlementGame.Browser;
 
@@ -16,11 +18,12 @@ public enum BuildingKind
 }
 
 /// <summary>
-/// Tags an entity as a placed building of a given <see cref="BuildingKind"/>, distinct from the
-/// ground tilemap it sits on. Which sprite-sheet frame represents each kind is a rendering
-/// concern (see <see cref="GameController.FrameFor"/>), not part of this component.
+/// Tags an entity as a placed building of a given <see cref="BuildingKind"/> occupying grid cell
+/// (<see cref="Column"/>, <see cref="Row"/>), distinct from the ground tilemap it sits on. Which
+/// sprite-sheet frame represents each kind is a rendering concern (see
+/// <see cref="GameController.FrameFor"/>), not part of this component.
 /// </summary>
-public readonly record struct Building(BuildingKind Kind);
+public readonly record struct Building(BuildingKind Kind, int Column, int Row);
 
 /// <summary>
 /// First real scene: a static ground tilemap plus a handful of placed buildings sitting on it,
@@ -74,6 +77,14 @@ public sealed class GameController
     private readonly World _world;
     private readonly BrowserRenderSurface _renderSurface;
     private readonly BrowserTimeSource _timeSource = new();
+    private readonly IInputState _input = new BrowserInputState();
+
+    /// <summary>Which <see cref="BuildingKind"/> a click places next; chosen with the 1/2/3 keys.</summary>
+    private BuildingKind _selectedKind = BuildingKind.Farm;
+
+    /// <summary>Left-mouse state from the previous tick, so a click places once, not once per
+    /// frame the button is held.</summary>
+    private bool _wasPlacePressed;
 
     public GameController(BrowserRenderSurface renderSurface)
     {
@@ -116,9 +127,9 @@ public sealed class GameController
     /// tilemap itself uses (see <c>Yaeger.Systems.UnifiedRenderSystem.SubmitTilemap</c>) so it
     /// lines up with the grid exactly one layer above the ground.
     /// </summary>
-    private void PlaceBuilding(BuildingKind kind, int column, int row, string tag)
+    private void PlaceBuilding(BuildingKind kind, int column, int row, string? tag = null)
     {
-        var building = _world.CreateEntity(tag);
+        var building = tag is null ? _world.CreateEntity() : _world.CreateEntity(tag);
         _world.AddComponent(
             building,
             new Transform2D(
@@ -128,7 +139,83 @@ public sealed class GameController
             )
         );
         _world.AddComponent(building, new SpriteSheet(TileSheetPath, TileSheetColumns, TileSheetRows));
-        _world.AddComponent(building, new Building(kind));
+        _world.AddComponent(building, new Building(kind, column, row));
+    }
+
+    /// <summary>Whether grid cell (<paramref name="column"/>, <paramref name="row"/>) already has
+    /// a building on it.</summary>
+    private bool IsCellOccupied(int column, int row)
+    {
+        foreach (var (_, building, _) in _world.Query<Building, Transform2D>())
+            if (building.Column == column && building.Row == row)
+                return true;
+        return false;
+    }
+
+    private bool TryGetCamera(out Camera2D camera)
+    {
+        camera = default;
+        return _world.TryGetEntity("camera", out var cameraEntity)
+            && _world.TryGetComponent(cameraEntity, out camera);
+    }
+
+    /// <summary>
+    /// Maps a mouse position, given in the same NDC coordinates <see cref="Camera2D.ViewProjection"/>
+    /// produces, to the grid cell underneath it by inverting the camera's view-projection.
+    /// Returns <c>false</c> when the point falls outside the buildable interior (the outermost
+    /// ring is the boundary wall, not placeable ground) or the camera matrix isn't invertible.
+    /// </summary>
+    private static bool TryScreenToCell(
+        Camera2D camera,
+        float aspectRatio,
+        Vector2 mouseNdc,
+        out int column,
+        out int row
+    )
+    {
+        column = 0;
+        row = 0;
+
+        if (!Matrix4x4.Invert(camera.ViewProjection(aspectRatio), out var inverseViewProjection))
+            return false;
+
+        var world = Vector4.Transform(
+            new Vector4(mouseNdc.X, mouseNdc.Y, 0f, 1f),
+            inverseViewProjection
+        );
+
+        column = (int)MathF.Floor((world.X - GroundOrigin.X) / TileWorldSize);
+        var rowFromBottom = (int)MathF.Floor((world.Y - GroundOrigin.Y) / TileWorldSize);
+        row = GridHeight - 1 - rowFromBottom;
+
+        return column >= 1 && column <= GridWidth - 2 && row >= 1 && row <= GridHeight - 2;
+    }
+
+    /// <summary>
+    /// Reads the 1/2/3 keys to change which <see cref="BuildingKind"/> a click places, and places
+    /// one on a left click over an empty interior cell — edge-detected against
+    /// <see cref="_wasPlacePressed"/> so a held button places once, not every tick.
+    /// </summary>
+    private void HandlePlacementInput(float aspectRatio)
+    {
+        if (_input.IsKeyPressed(Keys.Num1))
+            _selectedKind = BuildingKind.Farm;
+        else if (_input.IsKeyPressed(Keys.Num2))
+            _selectedKind = BuildingKind.House;
+        else if (_input.IsKeyPressed(Keys.Num3))
+            _selectedKind = BuildingKind.Fence;
+
+        var isPlacePressed = _input.IsMouseButtonPressed(MouseButton.Left);
+        var justClicked = isPlacePressed && !_wasPlacePressed;
+        _wasPlacePressed = isPlacePressed;
+
+        if (
+            justClicked
+            && TryGetCamera(out var camera)
+            && TryScreenToCell(camera, aspectRatio, _input.MousePositionNdc, out var column, out var row)
+            && !IsCellOccupied(column, row)
+        )
+            PlaceBuilding(_selectedKind, column, row);
     }
 
     /// <summary>Sprite-sheet frame that represents each <see cref="BuildingKind"/>.</summary>
@@ -150,6 +237,7 @@ public sealed class GameController
     public void Tick(double timestampMs, double aspectRatio)
     {
         _timeSource.Advance(timestampMs);
+        HandlePlacementInput((float)aspectRatio);
         Render((float)aspectRatio);
     }
 
@@ -159,12 +247,8 @@ public sealed class GameController
 
         // UnifiedRenderSystem picks the first Camera2D found and falls back to an identity view
         // when none exists (see Yaeger.Graphics.Camera2D's remarks); mirrored here since that
-        // system itself isn't available in the WASM build. World has no single-component Query
-        // overload, so the lookup goes through the same tag the entity was created with.
-        if (
-            _world.TryGetEntity("camera", out var cameraEntity)
-            && _world.TryGetComponent<Camera2D>(cameraEntity, out var camera)
-        )
+        // system itself isn't available in the WASM build.
+        if (TryGetCamera(out var camera))
             _renderSurface.SetCamera(camera.ViewProjection(aspectRatio));
 
         // Ground first, so the buildings below draw on top of the cells they occupy.
