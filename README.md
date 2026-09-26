@@ -44,3 +44,10 @@ dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Brows
 ```
 
 Then open the printed `http://localhost:...` URL in a browser with WebGL 2.0 support.
+
+## Deployment
+
+Pushes to `main` publish `ZombieSettlementGame.Browser` and deploy it to GitHub Pages via
+[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) (also runnable manually
+from the Actions tab). This is a one-time repository setting, not something the workflow can turn
+on itself: under **Settings → Pages**, set **Source** to **GitHub Actions**.
