@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/engine/" />
+  <Folder Name="/engine/Yaeger/" />
+  <Folder Name="/engine/Yaeger/src/" />
+  <Folder Name="/engine/Yaeger/src/Engine/">
+    <Project Path="engine/Yaeger/src/Engine/Yaeger.Browser/Yaeger.Browser.csproj" />
+    <Project Path="engine/Yaeger/src/Engine/Yaeger.Core/Yaeger.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj" />
+  </Folder>
+</Solution>

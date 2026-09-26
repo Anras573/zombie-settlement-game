@@ -1,0 +1,3 @@
+[submodule "engine/Yaeger"]
+	path = engine/Yaeger
+	url = https://github.com/Anras573/Yaeger.git

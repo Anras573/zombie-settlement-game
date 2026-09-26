@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zombie Settlement Game</title>
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="app.css" />
+    <script type="importmap"></script>
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">&#10006;</span>
+    </div>
+
+    <script>
+        // Drives the requestAnimationFrame game loop by invoking the C# Tick method.
+        let _rafRunning = false;
+
+        function startGameLoop(dotnetRef) {
+            if (_rafRunning) return;
+            _rafRunning = true;
+            function loop(timestamp) {
+                if (!_rafRunning) return;
+                dotnetRef.invokeMethodAsync('Tick', timestamp)
+                    .then(() => { if (_rafRunning) requestAnimationFrame(loop); })
+                    .catch((err) => console.error('[Yaeger] Game loop error:', err));
+            }
+            requestAnimationFrame(loop);
+        }
+
+        function stopGameLoop() {
+            _rafRunning = false;
+        }
+    </script>
+
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+</body>
+
+</html>
