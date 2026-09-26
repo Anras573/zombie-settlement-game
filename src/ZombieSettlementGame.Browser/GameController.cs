@@ -9,12 +9,26 @@ using Yaeger.Systems;
 namespace ZombieSettlementGame.Browser;
 
 /// <summary>
-/// Smallest possible Yaeger scene: one box bouncing around the canvas. Owns the ECS world
-/// and drives the game loop; each tick is invoked by JavaScript's
+/// Smallest possible Yaeger scene: one textured tile bouncing around the canvas, proving the
+/// texture-loading path (JS <c>Image</c> fetch → WebGL texture, see <c>yaeger-browser.js</c>'s
+/// <c>getOrLoadTexture</c>) works end-to-end in the browser, not just flat-tinted quads. Owns
+/// the ECS world and drives the game loop; each tick is invoked by JavaScript's
 /// <c>requestAnimationFrame</c> via <see cref="Tick"/>.
 /// </summary>
 public sealed class GameController
 {
+    /// <summary>
+    /// Kenney's "Roguelike/RPG pack" (CC0, https://kenney.nl/assets/roguelike-rpg-pack) — a single
+    /// 16x16-tile sheet, 1px margin between tiles, that the rest of the game's tile art will be
+    /// drawn from. See <c>wwwroot/assets/kenney/roguelike-rpg-pack/LICENSE.txt</c>.
+    /// </summary>
+    private const string TileSheetPath = "assets/kenney/roguelike-rpg-pack/roguelikeSheet_transparent.png";
+    private const int TileSheetColumns = 57;
+    private const int TileSheetRows = 31;
+
+    /// <summary>Row 6, column 0 of the sheet: a planted crop patch.</summary>
+    private const int FarmPlotFrame = 6 * TileSheetColumns;
+
     private readonly World _world;
     private readonly BrowserRenderSurface _renderSurface;
     private readonly BoxBounceSystem _bounceSystem;
@@ -30,13 +44,13 @@ public sealed class GameController
 
     private void BuildScene()
     {
-        var box = _world.CreateEntity("box");
+        var tile = _world.CreateEntity("tile");
         _world.AddComponent(
-            box,
+            tile,
             new Transform2D(new Vector2(0f, 0f), scale: new Vector2(0.2f, 0.2f))
         );
-        _world.AddComponent(box, new Sprite("", new Color(80, 200, 255)));
-        _world.AddComponent(box, new Velocity2D(0.5f, 0.35f));
+        _world.AddComponent(tile, new SpriteSheet(TileSheetPath, TileSheetColumns, TileSheetRows));
+        _world.AddComponent(tile, new Velocity2D(0.5f, 0.35f));
     }
 
     /// <summary>
@@ -56,12 +70,17 @@ public sealed class GameController
     {
         _renderSurface.BeginFrame();
 
-        foreach (var (_, sprite, transform) in _world.Query<Sprite, Transform2D>())
+        foreach (var (_, sheet, transform) in _world.Query<SpriteSheet, Transform2D>())
+        {
+            var (uvMin, uvMax) = sheet.GetFrameUv(FarmPlotFrame);
             _renderSurface.SubmitQuad(
                 transform.TransformMatrix,
-                sprite.TexturePath,
-                sprite.Tint.ToVector4()
+                sheet.TexturePath,
+                uvMin,
+                uvMax,
+                sheet.Tint.ToVector4()
             );
+        }
 
         _renderSurface.EndFrame();
     }

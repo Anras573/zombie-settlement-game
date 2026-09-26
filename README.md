@@ -43,7 +43,17 @@ the browser render pipeline, and the game loop are wired up end-to-end.
 dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj
 ```
 
-Then open the printed `http://localhost:...` URL in a browser with WebGL 2.0 support.
+Then open the printed `http://localhost:...` URL in a browser with WebGL 2.0 support. It now
+renders a textured tile (not just a flat-color box) bouncing around the canvas, proving the
+texture-loading path works end-to-end in the browser.
+
+## Assets
+
+Art comes from [Kenney](https://kenney.nl) (CC0 — free for any use, credit appreciated but not
+required). Packs are vendored under `src/ZombieSettlementGame.Browser/wwwroot/assets/kenney/<pack>/`,
+each with its own `LICENSE.txt`. Currently in use: the
+[Roguelike/RPG pack](https://kenney.nl/assets/roguelike-rpg-pack), a single 16x16-tile sheet
+(57 columns × 31 rows, 1px margin) referenced via `Yaeger.Graphics.SpriteSheet` and `GetFrameUv`.
 
 ## Deployment
 
