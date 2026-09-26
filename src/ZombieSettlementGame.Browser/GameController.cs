@@ -39,11 +39,19 @@ public sealed class GameController
     private const int FarmPlotColumn = 4;
     private const int FarmPlotRow = 4;
 
-    /// <summary>Size of one tile in NDC world units. <see cref="GridWidth"/>/<see cref="GridHeight"/>
-    /// times this fills the ±1 NDC canvas exactly, since the browser render path has no camera yet.</summary>
-    private const float TileWorldSize = 2f / GridWidth;
+    /// <summary>Size of one tile, in world units — one tile is one unit, unlike the ad hoc
+    /// NDC-filling size used before there was a camera.</summary>
+    private const float TileWorldSize = 1f;
 
-    private static readonly Vector2 GroundOrigin = new(-1f, -1f);
+    /// <summary>
+    /// Camera zoom that fits the <see cref="GridHeight"/>-tall grid vertically with a
+    /// one-tile margin: visible half-height is <c>1 / Zoom</c> world units (see
+    /// <see cref="Camera2D.ViewProjection"/>), so this gives <c>GridHeight / 2 + 1</c>.
+    /// </summary>
+    private const float CameraZoom = 1f / (GridHeight / 2f + 1f);
+
+    private static readonly Vector2 GroundOrigin = Vector2.Zero;
+    private static readonly Vector2 GridCenter = new(GridWidth / 2f, GridHeight / 2f);
 
     private readonly World _world;
     private readonly BrowserRenderSurface _renderSurface;
@@ -92,22 +100,36 @@ public sealed class GameController
             )
         );
         _world.AddComponent(farmPlot, new SpriteSheet(TileSheetPath, TileSheetColumns, TileSheetRows));
+
+        var camera = _world.CreateEntity("camera");
+        _world.AddComponent(camera, new Camera2D(GridCenter, CameraZoom));
     }
 
     /// <summary>
     /// Called once per frame by the JavaScript <c>requestAnimationFrame</c> pump.
-    /// The <paramref name="timestampMs"/> is the <c>DOMHighResTimeStamp</c> value from the browser.
+    /// The <paramref name="timestampMs"/> is the <c>DOMHighResTimeStamp</c> value from the browser;
+    /// <paramref name="aspectRatio"/> is the canvas' current CSS width / height.
     /// </summary>
     [JSInvokable]
-    public void Tick(double timestampMs)
+    public void Tick(double timestampMs, double aspectRatio)
     {
         _timeSource.Advance(timestampMs);
-        Render();
+        Render((float)aspectRatio);
     }
 
-    private void Render()
+    private void Render(float aspectRatio)
     {
         _renderSurface.BeginFrame();
+
+        // UnifiedRenderSystem picks the first Camera2D found and falls back to an identity view
+        // when none exists (see Yaeger.Graphics.Camera2D's remarks); mirrored here since that
+        // system itself isn't available in the WASM build. World has no single-component Query
+        // overload, so the lookup goes through the same tag the entity was created with.
+        if (
+            _world.TryGetEntity("camera", out var cameraEntity)
+            && _world.TryGetComponent<Camera2D>(cameraEntity, out var camera)
+        )
+            _renderSurface.SetCamera(camera.ViewProjection(aspectRatio));
 
         // Ground first, so the farm plot below draws on top of the cell it occupies.
         foreach (var (_, tilemap, transform) in _world.Query<Tilemap, Transform2D>())

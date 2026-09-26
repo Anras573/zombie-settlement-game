@@ -36,16 +36,15 @@ dotnet build ZombieSettlementGame.slnx
 ### Run the browser example
 
 `src/ZombieSettlementGame.Browser` is a minimal Blazor WebAssembly host that boots the Yaeger
-engine and renders a single box bouncing around the canvas — a smoke test proving the engine,
-the browser render pipeline, and the game loop are wired up end-to-end.
+engine and renders the settlement's ground plot: a 10x10 tilemap (grass interior, brick boundary
+wall) with one building (a farm plot) placed on it, viewed through a `Camera2D` that keeps tiles
+square regardless of the browser window's aspect ratio.
 
 ```bash
 dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj
 ```
 
-Then open the printed `http://localhost:...` URL in a browser with WebGL 2.0 support. It now
-renders a textured tile (not just a flat-color box) bouncing around the canvas, proving the
-texture-loading path works end-to-end in the browser.
+Then open the printed `http://localhost:...` URL in a browser with WebGL 2.0 support.
 
 ## Assets
 
