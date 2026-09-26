@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; let an in-flight run finish rather than cancelling it,
+# so Pages is never left pointing at a half-uploaded artifact.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish browser demo
+        run: >-
+          dotnet publish src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj
+          -c Release
+          -o publish
+
+      - name: Rebase for GitHub Pages project site
+        # Blazor's default base href ("/") assumes the app is served from the domain root.
+        # A GitHub Pages project site instead serves it from /<repo-name>/, so every relative
+        # asset URL (scripts, wasm, css) needs that prefix or they'll 404 once deployed.
+        run: |
+          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|' publish/wwwroot/index.html
+          touch publish/wwwroot/.nojekyll
+          cp publish/wwwroot/index.html publish/wwwroot/404.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

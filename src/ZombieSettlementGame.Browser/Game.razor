@@ -13,7 +13,12 @@
             return;
 
         // Load the Yaeger interop ES module so all [JSImport] functions become available.
-        await JSHost.ImportAsync("yaeger-browser", "/yaeger-browser.js");
+        // JSHost.ImportAsync resolves relative paths against the runtime's own glue script,
+        // which is served from wwwroot/_framework/ regardless of <base href> — so "../" (not
+        // "/yaeger-browser.js", which ignores <base href> and breaks off the domain root) is
+        // what lands back in wwwroot, letting the app run from a sub-path such as a GitHub
+        // Pages project site.
+        await JSHost.ImportAsync("yaeger-browser", "../yaeger-browser.js");
 
         _renderSurface = new BrowserRenderSurface("yaeger-canvas");
         _renderSurface.Initialize();
