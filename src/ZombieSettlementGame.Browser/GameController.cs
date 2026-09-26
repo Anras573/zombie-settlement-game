@@ -3,17 +3,13 @@ using Microsoft.JSInterop;
 using Yaeger.Browser;
 using Yaeger.ECS;
 using Yaeger.Graphics;
-using Yaeger.Physics.Components;
-using Yaeger.Systems;
 
 namespace ZombieSettlementGame.Browser;
 
 /// <summary>
-/// Smallest possible Yaeger scene: one textured tile bouncing around the canvas, proving the
-/// texture-loading path (JS <c>Image</c> fetch → WebGL texture, see <c>yaeger-browser.js</c>'s
-/// <c>getOrLoadTexture</c>) works end-to-end in the browser, not just flat-tinted quads. Owns
-/// the ECS world and drives the game loop; each tick is invoked by JavaScript's
-/// <c>requestAnimationFrame</c> via <see cref="Tick"/>.
+/// First real scene: a static ground tilemap plus one building entity sitting on it, both drawn
+/// from the same Kenney sheet. Owns the ECS world and drives the game loop; each tick is invoked
+/// by JavaScript's <c>requestAnimationFrame</c> via <see cref="Tick"/>.
 /// </summary>
 public sealed class GameController
 {
@@ -26,31 +22,76 @@ public sealed class GameController
     private const int TileSheetColumns = 57;
     private const int TileSheetRows = 31;
 
-    /// <summary>Row 6, column 0 of the sheet: a planted crop patch.</summary>
+    /// <summary>Row 0, column 5 of the sheet: plain grass, used to fill the ground.</summary>
+    private const int GrassTile = 5;
+
+    /// <summary>Row 2, column 5 of the sheet: a brick wall, used as the settlement's boundary.</summary>
+    private const int WallTile = 2 * TileSheetColumns + 5;
+
+    /// <summary>Row 6, column 0 of the sheet: a planted crop patch — the first placed building.</summary>
     private const int FarmPlotFrame = 6 * TileSheetColumns;
+
+    /// <summary>Ground grid size, in tiles.</summary>
+    private const int GridWidth = 10;
+    private const int GridHeight = 10;
+
+    /// <summary>Grid cell the farm plot is placed on.</summary>
+    private const int FarmPlotColumn = 4;
+    private const int FarmPlotRow = 4;
+
+    /// <summary>Size of one tile in NDC world units. <see cref="GridWidth"/>/<see cref="GridHeight"/>
+    /// times this fills the ±1 NDC canvas exactly, since the browser render path has no camera yet.</summary>
+    private const float TileWorldSize = 2f / GridWidth;
+
+    private static readonly Vector2 GroundOrigin = new(-1f, -1f);
 
     private readonly World _world;
     private readonly BrowserRenderSurface _renderSurface;
-    private readonly BoxBounceSystem _bounceSystem;
     private readonly BrowserTimeSource _timeSource = new();
 
     public GameController(BrowserRenderSurface renderSurface)
     {
         _renderSurface = renderSurface;
         _world = new World();
-        _bounceSystem = new BoxBounceSystem(_world);
         BuildScene();
     }
 
     private void BuildScene()
     {
-        var tile = _world.CreateEntity("tile");
-        _world.AddComponent(
-            tile,
-            new Transform2D(new Vector2(0f, 0f), scale: new Vector2(0.2f, 0.2f))
+        var tileset = new Tileset(TileSheetPath, TileSheetColumns, TileSheetRows);
+        var tilemap = new Tilemap(
+            tileset,
+            GridWidth,
+            GridHeight,
+            tileSize: new Vector2(TileWorldSize, TileWorldSize)
         );
-        _world.AddComponent(tile, new SpriteSheet(TileSheetPath, TileSheetColumns, TileSheetRows));
-        _world.AddComponent(tile, new Velocity2D(0.5f, 0.35f));
+        for (var row = 0; row < GridHeight; row++)
+        for (var column = 0; column < GridWidth; column++)
+        {
+            var onBorder = row == 0 || row == GridHeight - 1 || column == 0 || column == GridWidth - 1;
+            tilemap.SetTile(column, row, onBorder ? WallTile : GrassTile);
+        }
+
+        var ground = _world.CreateEntity("ground");
+        _world.AddComponent(ground, new Transform2D(GroundOrigin));
+        _world.AddComponent(ground, tilemap);
+
+        // Uses the same cell-centre math the tilemap itself uses (see
+        // Yaeger.Systems.UnifiedRenderSystem.SubmitTilemap), so it lines up with the grid exactly
+        // one layer above the ground.
+        var farmPlot = _world.CreateEntity("farm-plot");
+        _world.AddComponent(
+            farmPlot,
+            new Transform2D(
+                GroundOrigin
+                    + new Vector2(
+                        FarmPlotColumn + 0.5f,
+                        GridHeight - 1 - FarmPlotRow + 0.5f
+                    ) * TileWorldSize,
+                scale: new Vector2(TileWorldSize, TileWorldSize)
+            )
+        );
+        _world.AddComponent(farmPlot, new SpriteSheet(TileSheetPath, TileSheetColumns, TileSheetRows));
     }
 
     /// <summary>
@@ -61,14 +102,16 @@ public sealed class GameController
     public void Tick(double timestampMs)
     {
         _timeSource.Advance(timestampMs);
-
-        _bounceSystem.Update(_timeSource.DeltaTime);
         Render();
     }
 
     private void Render()
     {
         _renderSurface.BeginFrame();
+
+        // Ground first, so the farm plot below draws on top of the cell it occupies.
+        foreach (var (_, tilemap, transform) in _world.Query<Tilemap, Transform2D>())
+            RenderTilemap(tilemap, transform);
 
         foreach (var (_, sheet, transform) in _world.Query<SpriteSheet, Transform2D>())
         {
@@ -84,43 +127,38 @@ public sealed class GameController
 
         _renderSurface.EndFrame();
     }
-}
 
-/// <summary>
-/// Moves every entity that has a <see cref="Velocity2D"/> and bounces it off the canvas'
-/// NDC edges (±1 on both axes).
-/// </summary>
-internal sealed class BoxBounceSystem(World world) : IUpdateSystem
-{
-    public void Update(float deltaTime)
+    /// <summary>
+    /// Draws every non-empty cell of <paramref name="map"/> as one quad, mirroring the per-tile
+    /// transform math of <c>Yaeger.Systems.UnifiedRenderSystem.SubmitTilemap</c> — that system
+    /// isn't available here since its camera support pulls in <c>Yaeger</c>'s native/Silk.NET
+    /// dependency, which the WASM build can't reference.
+    /// </summary>
+    private void RenderTilemap(Tilemap map, Transform2D transform)
     {
-        foreach (var (entity, velocity, transform) in world.Query<Velocity2D, Transform2D>())
+        for (var row = 0; row < map.Height; row++)
+        for (var column = 0; column < map.Width; column++)
         {
-            var pos = transform.Position;
-            var vel = velocity.Linear;
-            var halfScale = transform.Scale * 0.5f;
+            var tileIndex = map.GetTile(column, row);
+            if (tileIndex == Tilemap.EmptyTile)
+                continue;
 
-            pos += vel * deltaTime;
+            var (uvMin, uvMax) = map.Tileset.GetTileUv(tileIndex);
+            var local =
+                Matrix4x4.CreateScale(map.TileSize.X, map.TileSize.Y, 1f)
+                * Matrix4x4.CreateTranslation(
+                    (column + 0.5f) * map.TileSize.X,
+                    (map.Height - 1 - row + 0.5f) * map.TileSize.Y,
+                    0f
+                );
 
-            if (pos.X - halfScale.X < -1f || pos.X + halfScale.X > 1f)
-            {
-                vel.X = -vel.X;
-                pos.X = Math.Clamp(pos.X, -1f + halfScale.X, 1f - halfScale.X);
-            }
-
-            if (pos.Y - halfScale.Y < -1f || pos.Y + halfScale.Y > 1f)
-            {
-                vel.Y = -vel.Y;
-                pos.Y = Math.Clamp(pos.Y, -1f + halfScale.Y, 1f - halfScale.Y);
-            }
-
-            var newTransform = transform;
-            newTransform.Position = pos;
-            world.AddComponent(entity, newTransform);
-
-            var newVelocity = velocity;
-            newVelocity.Linear = vel;
-            world.AddComponent(entity, newVelocity);
+            _renderSurface.SubmitQuad(
+                local * transform.TransformMatrix,
+                map.Tileset.TexturePath,
+                uvMin,
+                uvMax,
+                map.Tint.ToVector4()
+            );
         }
     }
 }
