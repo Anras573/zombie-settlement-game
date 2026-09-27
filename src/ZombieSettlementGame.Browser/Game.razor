@@ -10,7 +10,7 @@
         <span class="hud__resource"><span aria-hidden="true">🌾</span> @(_controller?.Food ?? 0)</span>
         <span class="hud__resource"><span aria-hidden="true">🧟</span> @(_controller?.ZombieCount ?? 0)</span>
     </div>
-    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. Zombies spawn at the walls and destroy whichever building is nearest — keep a ring of fences up. (Keys 1/2/3/4 also work.)</p>
+    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. Zombies spawn at the walls and attack whichever building is nearest, tinting it red as it takes damage — switch to Repair and tap a damaged building to spend wood restoring it before it's destroyed. (Keys 1/2/3/4 and R also work.)</p>
     <div class="hud__buildings" role="group" aria-label="Choose building to place">
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm) @AffordClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
             <span aria-hidden="true">🌾</span> Farm (@GameController.WoodCost(BuildingKind.Farm) 🪵)
@@ -23,6 +23,9 @@
         </button>
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Sawmill) @AffordClass(BuildingKind.Sawmill)" @onclick="() => SelectBuilding(BuildingKind.Sawmill)">
             <span aria-hidden="true">🪚</span> Sawmill (@GameController.WoodCost(BuildingKind.Sawmill) 🪵)
+        </button>
+        <button type="button" class="hud__button @RepairSelectedClass() @RepairAffordClass()" @onclick="SelectRepairMode">
+            <span aria-hidden="true">🔨</span> Repair (@GameController.RepairWoodCost 🪵)
         </button>
     </div>
 </div>
@@ -42,6 +45,9 @@
     // keyboard shortcuts change the controller's selection directly without going through this
     // field, so it can lag behind if both input methods are mixed — cosmetic only.
     private BuildingKind _selectedKind = BuildingKind.Farm;
+
+    // Mirrors GameController.IsRepairMode for the same reason and with the same caveat.
+    private bool _isRepairMode;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -72,13 +78,27 @@
     {
         _controller?.SelectBuilding(kind);
         _selectedKind = kind;
+        _isRepairMode = false;
+    }
+
+    private void SelectRepairMode()
+    {
+        _controller?.SelectRepairMode();
+        _isRepairMode = true;
     }
 
     private string SelectedClass(BuildingKind kind) =>
-        kind == _selectedKind ? "hud__button--selected" : "";
+        !_isRepairMode && kind == _selectedKind ? "hud__button--selected" : "";
 
     private string AffordClass(BuildingKind kind) =>
         _controller is not null && _controller.Wood < GameController.WoodCost(kind)
+            ? "hud__button--unaffordable"
+            : "";
+
+    private string RepairSelectedClass() => _isRepairMode ? "hud__button--selected" : "";
+
+    private string RepairAffordClass() =>
+        _controller is not null && _controller.Wood < GameController.RepairWoodCost
             ? "hud__button--unaffordable"
             : "";
 

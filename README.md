@@ -49,10 +49,13 @@ into the same mouse-style state the placement logic reads.
 
 Every placed building carries hit points. On a timer, a zombie spawns on the grid's boundary
 ring and walks in a straight line toward whichever building is nearest, then attacks it until it's
-destroyed — freeing its cell for the player to rebuild. There's no way to fight back directly yet,
-so a ring of fences around the settlement's perimeter (the sturdiest building) is the only defense:
-since zombies always go for the nearest target, fences take the brunt of the horde before farms,
-houses, or sawmills ever do.
+destroyed — freeing its cell for the player to rebuild. A building under attack tints redder the
+more damaged it is, giving an at-a-glance warning before it's lost. Tap or click the **Repair**
+button (or press **R**) to switch the next tap/click into a repair action instead of a placement:
+tapping a damaged building spends a little wood to patch it back up, buying time before the horde
+finishes it off. Repairing isn't free, though, so a ring of fences around the settlement's
+perimeter (the sturdiest building) is still the front line: since zombies always go for the nearest
+target, fences take the brunt of the horde before farms, houses, or sawmills ever do.
 
 ```bash
 dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj

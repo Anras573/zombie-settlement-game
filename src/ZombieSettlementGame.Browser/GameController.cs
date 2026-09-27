@@ -9,10 +9,11 @@ namespace ZombieSettlementGame.Browser;
 /// First real scene: a static ground tilemap plus a handful of placed buildings sitting on it,
 /// all drawn from the same Kenney sheet. Owns the ECS world and drives the game loop; each tick
 /// is invoked by JavaScript's <c>requestAnimationFrame</c> via <see cref="Tick"/>. The scene
-/// itself, placement rules, the resource economy, the camera, input handling, the zombie threat,
-/// and rendering each live in their own type (<see cref="SettlementScene"/>,
-/// <see cref="BuildingPlacement"/>, <see cref="SettlementStockpile"/>, <see cref="SettlementCamera"/>,
-/// <see cref="PlacementController"/>, <see cref="ZombieController"/>, <see cref="SettlementRenderer"/>)
+/// itself, placement rules, repairs, the resource economy, the camera, input handling, the zombie
+/// threat, and rendering each live in their own type (<see cref="SettlementScene"/>,
+/// <see cref="BuildingPlacement"/>, <see cref="BuildingRepair"/>, <see cref="SettlementStockpile"/>,
+/// <see cref="SettlementCamera"/>, <see cref="PlacementController"/>, <see cref="ZombieController"/>,
+/// <see cref="SettlementRenderer"/>)
 /// — this class just wires them together each tick and exposes what the host Razor page needs.
 /// </summary>
 public sealed class GameController
@@ -57,6 +58,18 @@ public sealed class GameController
     /// host page's on-screen building picker buttons; the 1/2/3/4 keyboard shortcuts set the same
     /// selection directly in <see cref="PlacementController.HandleInput"/>.</summary>
     public void SelectBuilding(BuildingKind kind) => _placement.SelectBuilding(kind);
+
+    /// <summary>Whether a click currently repairs a building instead of placing one; read by the
+    /// host page to highlight the Repair button.</summary>
+    public bool IsRepairMode => _placement.IsRepairMode;
+
+    /// <summary>Switches a click/tap to repair whichever building it lands on next. Called from
+    /// the host page's Repair button; the <b>R</b> key does the same directly in
+    /// <see cref="PlacementController.HandleInput"/>.</summary>
+    public void SelectRepairMode() => _placement.SelectRepairMode();
+
+    /// <summary>Wood one repair action costs; read by the host page's HUD hint.</summary>
+    public static int RepairWoodCost => BuildingRepair.WoodCost;
 
     /// <summary>Wood currently in the stockpile; read by the host page's HUD.</summary>
     public int Wood => _stockpile.Wood;
