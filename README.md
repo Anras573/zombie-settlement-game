@@ -47,6 +47,13 @@ inverting the camera's view-projection, so placement stays correct at any window
 is handled by Yaeger's browser input layer, which maps pointer events (mouse, touch, and pen)
 into the same mouse-style state the placement logic reads.
 
+Every placed building carries hit points. On a timer, a zombie spawns on the grid's boundary
+ring and walks in a straight line toward whichever building is nearest, then attacks it until it's
+destroyed — freeing its cell for the player to rebuild. There's no way to fight back directly yet,
+so a ring of fences around the settlement's perimeter (the sturdiest building) is the only defense:
+since zombies always go for the nearest target, fences take the brunt of the horde before farms,
+houses, or sawmills ever do.
+
 ```bash
 dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj
 ```

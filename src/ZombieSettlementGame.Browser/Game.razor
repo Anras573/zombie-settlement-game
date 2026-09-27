@@ -8,8 +8,9 @@
     <div class="hud__resources" role="status" aria-label="Resources">
         <span class="hud__resource"><span aria-hidden="true">🪵</span> @(_controller?.Wood ?? 0)</span>
         <span class="hud__resource"><span aria-hidden="true">🌾</span> @(_controller?.Food ?? 0)</span>
+        <span class="hud__resource"><span aria-hidden="true">🧟</span> @(_controller?.ZombieCount ?? 0)</span>
     </div>
-    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. (Keys 1/2/3/4 also work.)</p>
+    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. Zombies spawn at the walls and destroy whichever building is nearest — keep a ring of fences up. (Keys 1/2/3/4 also work.)</p>
     <div class="hud__buildings" role="group" aria-label="Choose building to place">
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm) @AffordClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
             <span aria-hidden="true">🌾</span> Farm (@GameController.WoodCost(BuildingKind.Farm) 🪵)

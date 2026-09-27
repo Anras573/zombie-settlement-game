@@ -42,4 +42,19 @@ public static class BuildingCatalog
             BuildingKind.Sawmill => 4,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
         };
+
+    /// <summary>Hit points a freshly placed building of the given <paramref name="kind"/> starts
+    /// (and maxes out) at — see <see cref="BuildingHealth"/>. A <see cref="BuildingKind.Fence"/>
+    /// is the sturdiest: since <see cref="ZombieController"/> always attacks whichever building is
+    /// nearest, a ring of fences around the settlement's perimeter takes the brunt of the horde
+    /// before farms or houses ever do.</summary>
+    public static int MaxHealthFor(BuildingKind kind) =>
+        kind switch
+        {
+            BuildingKind.Farm => 8,
+            BuildingKind.House => 10,
+            BuildingKind.Fence => 15,
+            BuildingKind.Sawmill => 8,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
+        };
 }

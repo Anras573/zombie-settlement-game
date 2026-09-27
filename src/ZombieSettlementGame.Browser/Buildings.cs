@@ -32,3 +32,11 @@ public readonly record struct FoodProducer(float IntervalSeconds, float Elapsed)
 /// "resource producer" since only two kinds exist and each already reads clearly on its own.
 /// </summary>
 public readonly record struct WoodProducer(float IntervalSeconds, float Elapsed);
+
+/// <summary>
+/// A building's remaining/maximum hit points. Every placed building carries one (see
+/// <see cref="BuildingPlacement.PlaceBuilding"/>, <see cref="BuildingCatalog.MaxHealthFor"/>) so
+/// <see cref="ZombieController"/> has something to whittle down; a building is destroyed and its
+/// cell freed the moment <see cref="Current"/> reaches zero.
+/// </summary>
+public readonly record struct BuildingHealth(int Current, int Max);

@@ -9,11 +9,11 @@ namespace ZombieSettlementGame.Browser;
 /// First real scene: a static ground tilemap plus a handful of placed buildings sitting on it,
 /// all drawn from the same Kenney sheet. Owns the ECS world and drives the game loop; each tick
 /// is invoked by JavaScript's <c>requestAnimationFrame</c> via <see cref="Tick"/>. The scene
-/// itself, placement rules, the resource economy, the camera, input handling, and rendering each
-/// live in their own type (<see cref="SettlementScene"/>, <see cref="BuildingPlacement"/>,
-/// <see cref="SettlementStockpile"/>, <see cref="SettlementCamera"/>,
-/// <see cref="PlacementController"/>, <see cref="SettlementRenderer"/>) — this class just wires
-/// them together each tick and exposes what the host Razor page needs.
+/// itself, placement rules, the resource economy, the camera, input handling, the zombie threat,
+/// and rendering each live in their own type (<see cref="SettlementScene"/>,
+/// <see cref="BuildingPlacement"/>, <see cref="SettlementStockpile"/>, <see cref="SettlementCamera"/>,
+/// <see cref="PlacementController"/>, <see cref="ZombieController"/>, <see cref="SettlementRenderer"/>)
+/// — this class just wires them together each tick and exposes what the host Razor page needs.
 /// </summary>
 public sealed class GameController
 {
@@ -23,6 +23,7 @@ public sealed class GameController
     private readonly IInputState _input = new BrowserInputState();
     private readonly SettlementStockpile _stockpile = new();
     private readonly PlacementController _placement = new();
+    private readonly ZombieController _zombies = new();
 
     public GameController(BrowserRenderSurface renderSurface)
     {
@@ -43,6 +44,7 @@ public sealed class GameController
         SettlementCamera.UpdateZoom(_world, (float)aspectRatio);
         _stockpile.UpdateFoodProduction(_world, _timeSource.DeltaTime);
         _stockpile.UpdateWoodProduction(_world, _timeSource.DeltaTime);
+        _zombies.Update(_world, _timeSource.DeltaTime);
         _placement.HandleInput(_world, _input, (float)aspectRatio, _stockpile);
         SettlementRenderer.Render(_world, _renderSurface, (float)aspectRatio);
     }
@@ -61,6 +63,9 @@ public sealed class GameController
 
     /// <summary>Food harvested so far; read by the host page's HUD.</summary>
     public int Food => _stockpile.Food;
+
+    /// <summary>Zombies currently alive on the grid; read by the host page's HUD.</summary>
+    public int ZombieCount => _world.GetStore<Zombie>().Count;
 
     /// <summary>Wood a building of the given <paramref name="kind"/> costs to place; read by the
     /// host page's HUD to grey out buttons the settlement can't currently afford.</summary>
