@@ -9,7 +9,7 @@
         <span class="hud__resource"><span aria-hidden="true">🪵</span> @(_controller?.Wood ?? 0)</span>
         <span class="hud__resource"><span aria-hidden="true">🌾</span> @(_controller?.Food ?? 0)</span>
     </div>
-    <p class="hud__hint">Tap a building, then tap the grid to place it. (Keys 1/2/3 also work.)</p>
+    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. (Keys 1/2/3/4 also work.)</p>
     <div class="hud__buildings" role="group" aria-label="Choose building to place">
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm) @AffordClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
             <span aria-hidden="true">🌾</span> Farm (@GameController.WoodCost(BuildingKind.Farm) 🪵)
@@ -19,6 +19,9 @@
         </button>
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Fence) @AffordClass(BuildingKind.Fence)" @onclick="() => SelectBuilding(BuildingKind.Fence)">
             <span aria-hidden="true">🧱</span> Fence (@GameController.WoodCost(BuildingKind.Fence) 🪵)
+        </button>
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.Sawmill) @AffordClass(BuildingKind.Sawmill)" @onclick="() => SelectBuilding(BuildingKind.Sawmill)">
+            <span aria-hidden="true">🪚</span> Sawmill (@GameController.WoodCost(BuildingKind.Sawmill) 🪵)
         </button>
     </div>
 </div>
