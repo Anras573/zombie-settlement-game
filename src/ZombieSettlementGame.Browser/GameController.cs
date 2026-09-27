@@ -15,6 +15,7 @@ public enum BuildingKind
     Farm,
     House,
     Fence,
+    Sawmill,
 }
 
 /// <summary>
@@ -32,6 +33,13 @@ public readonly record struct Building(BuildingKind Kind, int Column, int Row);
 /// pattern components use throughout this file (see <see cref="GameController.UpdateFoodProduction"/>).
 /// </summary>
 public readonly record struct FoodProducer(float IntervalSeconds, float Elapsed);
+
+/// <summary>
+/// Marks a sawmill as harvesting wood on a timer, the same shape and update pattern as
+/// <see cref="FoodProducer"/> but for wood — kept as its own type rather than a shared generic
+/// "resource producer" since only two kinds exist and each already reads clearly on its own.
+/// </summary>
+public readonly record struct WoodProducer(float IntervalSeconds, float Elapsed);
 
 /// <summary>
 /// First real scene: a static ground tilemap plus a handful of placed buildings sitting on it,
@@ -64,6 +72,13 @@ public sealed class GameController
     /// <summary>Row 18, column 48 of the sheet: a wooden fence lattice.</summary>
     private const int FenceFrame = 18 * TileSheetColumns + 48;
 
+    /// <summary>Row 22, column 53 of the sheet: a bundle of cut logs, representing a sawmill.</summary>
+    private const int SawmillFrame = 22 * TileSheetColumns + 53;
+
+    /// <summary>Row 9, column 18 of the sheet: a pine tree, used for the forest patch a sawmill
+    /// must be built next to.</summary>
+    private const int ForestTile = 9 * TileSheetColumns + 18;
+
     /// <summary>Ground grid size, in tiles.</summary>
     private const int GridWidth = 10;
     private const int GridHeight = 10;
@@ -85,6 +100,19 @@ public sealed class GameController
 
     /// <summary>Food yielded by one farm harvest.</summary>
     private const int FoodPerHarvest = 1;
+
+    /// <summary>Seconds a sawmill takes to harvest one unit of wood.</summary>
+    private const float WoodProductionIntervalSeconds = 4f;
+
+    /// <summary>Wood yielded by one sawmill harvest.</summary>
+    private const int WoodPerHarvest = 1;
+
+    /// <summary>Interior columns/rows (inclusive) of the forest patch a sawmill must be built next
+    /// to — a 3x3 block clear of the starter buildings at (2,2)/(4,4)/(7,7).</summary>
+    private const int ForestMinColumn = 1;
+    private const int ForestMaxColumn = 3;
+    private const int ForestMinRow = 6;
+    private const int ForestMaxRow = 8;
 
     private static readonly Vector2 GroundOrigin = Vector2.Zero;
     private static readonly Vector2 GridCenter = new(GridWidth / 2f, GridHeight / 2f);
@@ -135,6 +163,24 @@ public sealed class GameController
         var ground = _world.CreateEntity("ground");
         _world.AddComponent(ground, new Transform2D(GroundOrigin));
         _world.AddComponent(ground, tilemap);
+
+        // A second, sparse tilemap layered over the grass rather than replacing it: the tree
+        // sprite's canopy doesn't fill its 16x16 cell, so drawing it directly on the ground tile
+        // (as WallTile/GrassTile itself do) would leave the transparent corners showing the empty
+        // canvas instead of grass. Rendered strictly after "ground" — see Render().
+        var forestTilemap = new Tilemap(
+            tileset,
+            GridWidth,
+            GridHeight,
+            tileSize: new Vector2(TileWorldSize, TileWorldSize)
+        );
+        for (var row = ForestMinRow; row <= ForestMaxRow; row++)
+        for (var column = ForestMinColumn; column <= ForestMaxColumn; column++)
+            forestTilemap.SetTile(column, row, ForestTile);
+
+        var forest = _world.CreateEntity("forest");
+        _world.AddComponent(forest, new Transform2D(GroundOrigin));
+        _world.AddComponent(forest, forestTilemap);
 
         PlaceBuilding(BuildingKind.Farm, column: 4, row: 4, tag: "building-farm");
         PlaceBuilding(BuildingKind.House, column: 2, row: 2, tag: "building-house");
@@ -192,6 +238,8 @@ public sealed class GameController
 
         if (kind == BuildingKind.Farm)
             _world.AddComponent(building, new FoodProducer(FoodProductionIntervalSeconds, Elapsed: 0f));
+        else if (kind == BuildingKind.Sawmill)
+            _world.AddComponent(building, new WoodProducer(WoodProductionIntervalSeconds, Elapsed: 0f));
     }
 
     /// <summary>Wood spent placing one building of the given <paramref name="kind"/>.</summary>
@@ -201,8 +249,35 @@ public sealed class GameController
             BuildingKind.Farm => 3,
             BuildingKind.House => 5,
             BuildingKind.Fence => 2,
+            BuildingKind.Sawmill => 4,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
         };
+
+    /// <summary>The sparse overlay tilemap forest tiles live on (see <see cref="BuildScene"/>) —
+    /// separate from "ground" so grass shows through a tree sprite's transparent margins.</summary>
+    private Tilemap GetForestTilemap() => _world.GetComponent<Tilemap>(_world.GetEntity("forest"));
+
+    /// <summary>Whether grid cell (<paramref name="column"/>, <paramref name="row"/>) is standing
+    /// forest — never buildable itself (the trees are in the way), but what a sawmill needs to sit
+    /// next to.</summary>
+    private bool IsForestTile(int column, int row) => GetForestTilemap().GetTile(column, row) == ForestTile;
+
+    /// <summary>Whether any of the four orthogonal neighbours of (<paramref name="column"/>,
+    /// <paramref name="row"/>) is forest — the placement rule for a <see cref="BuildingKind.Sawmill"/>,
+    /// which harvests the trees beside it rather than clearing the ground it stands on.</summary>
+    private bool IsAdjacentToForest(int column, int row) =>
+        IsForestTile(column - 1, row)
+        || IsForestTile(column + 1, row)
+        || IsForestTile(column, row - 1)
+        || IsForestTile(column, row + 1);
+
+    /// <summary>
+    /// Whether a building of <paramref name="kind"/> may be placed on grid cell
+    /// (<paramref name="column"/>, <paramref name="row"/>) given terrain alone (occupancy and cost
+    /// are checked separately): never directly on forest, and a sawmill only next to it.
+    /// </summary>
+    private bool CanPlaceOnTerrain(BuildingKind kind, int column, int row) =>
+        !IsForestTile(column, row) && (kind != BuildingKind.Sawmill || IsAdjacentToForest(column, row));
 
     /// <summary>
     /// Spends the wood <see cref="WoodCostFor"/> a building of <paramref name="kind"/> and places
@@ -237,6 +312,23 @@ public sealed class GameController
             {
                 elapsed -= producer.IntervalSeconds;
                 _food += FoodPerHarvest;
+            }
+
+            _world.AddComponent(entity, producer with { Elapsed = elapsed });
+        }
+    }
+
+    /// <summary>Same timer-and-carry-over shape as <see cref="UpdateFoodProduction"/>, but credits
+    /// <see cref="WoodPerHarvest"/> wood per sawmill harvest instead.</summary>
+    private void UpdateWoodProduction(float deltaTime)
+    {
+        foreach (var (entity, producer, _) in _world.Query<WoodProducer, Building>())
+        {
+            var elapsed = producer.Elapsed + deltaTime;
+            while (elapsed >= producer.IntervalSeconds)
+            {
+                elapsed -= producer.IntervalSeconds;
+                _wood += WoodPerHarvest;
             }
 
             _world.AddComponent(entity, producer with { Elapsed = elapsed });
@@ -293,9 +385,10 @@ public sealed class GameController
     }
 
     /// <summary>
-    /// Reads the 1/2/3 keys to change which <see cref="BuildingKind"/> a click places, and places
-    /// one on a left click over an empty interior cell — edge-detected against
-    /// <see cref="_wasPlacePressed"/> so a held button places once, not every tick.
+    /// Reads the 1/2/3/4 keys to change which <see cref="BuildingKind"/> a click places, and places
+    /// one on a left click over an empty interior cell whose terrain allows it (see
+    /// <see cref="CanPlaceOnTerrain"/>) — edge-detected against <see cref="_wasPlacePressed"/> so a
+    /// held button places once, not every tick.
     /// </summary>
     private void HandlePlacementInput(float aspectRatio)
     {
@@ -305,6 +398,8 @@ public sealed class GameController
             _selectedKind = BuildingKind.House;
         else if (_input.IsKeyPressed(Keys.Num3))
             _selectedKind = BuildingKind.Fence;
+        else if (_input.IsKeyPressed(Keys.Num4))
+            _selectedKind = BuildingKind.Sawmill;
 
         var isPlacePressed = _input.IsMouseButtonPressed(MouseButton.Left);
         var justClicked = isPlacePressed && !_wasPlacePressed;
@@ -315,6 +410,7 @@ public sealed class GameController
             && TryGetCamera(out var camera)
             && TryScreenToCell(camera, aspectRatio, _input.MousePositionNdc, out var column, out var row)
             && !IsCellOccupied(column, row)
+            && CanPlaceOnTerrain(_selectedKind, column, row)
         )
             TryPlaceBuilding(_selectedKind, column, row);
     }
@@ -326,6 +422,7 @@ public sealed class GameController
             BuildingKind.Farm => FarmFrame,
             BuildingKind.House => HouseFrame,
             BuildingKind.Fence => FenceFrame,
+            BuildingKind.Sawmill => SawmillFrame,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
         };
 
@@ -340,6 +437,7 @@ public sealed class GameController
         _timeSource.Advance(timestampMs);
         UpdateCameraZoom((float)aspectRatio);
         UpdateFoodProduction(_timeSource.DeltaTime);
+        UpdateWoodProduction(_timeSource.DeltaTime);
         HandlePlacementInput((float)aspectRatio);
         Render((float)aspectRatio);
     }
@@ -373,9 +471,20 @@ public sealed class GameController
         if (TryGetCamera(out var camera))
             _renderSurface.SetCamera(camera.ViewProjection(aspectRatio));
 
-        // Ground first, so the buildings below draw on top of the cells they occupy.
-        foreach (var (_, tilemap, transform) in _world.Query<Tilemap, Transform2D>())
+        // Ground strictly before every other tilemap layer (so a layered decoration like the
+        // forest overlay draws its transparent-cornered tiles over grass, not the empty canvas)
+        // and before the buildings below, which draw on top of the cells they occupy. Looked up
+        // by tag rather than relying on Query's enumeration order, which Dictionary<TKey,TValue>
+        // doesn't contractually guarantee to match insertion order.
+        var groundEntity = _world.GetEntity("ground");
+        RenderTilemap(_world.GetComponent<Tilemap>(groundEntity), _world.GetComponent<Transform2D>(groundEntity));
+
+        foreach (var (entity, tilemap, transform) in _world.Query<Tilemap, Transform2D>())
+        {
+            if (entity == groundEntity)
+                continue;
             RenderTilemap(tilemap, transform);
+        }
 
         foreach (var (_, building, sheet, transform) in _world.Query<Building, SpriteSheet, Transform2D>())
         {
