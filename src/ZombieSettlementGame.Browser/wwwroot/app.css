@@ -13,17 +13,51 @@ body {
     touch-action: none;
 }
 
-.controls-hint {
+.hud {
     position: fixed;
-    left: 0.75rem;
-    bottom: 0.75rem;
-    margin: 0;
-    padding: 0.4rem 0.75rem;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem calc(0.6rem + env(safe-area-inset-right)) calc(0.6rem + env(safe-area-inset-bottom))
+        calc(0.6rem + env(safe-area-inset-left));
     background: rgba(0, 0, 0, 0.55);
+}
+
+.hud__hint {
+    margin: 0;
     color: #e0e0e0;
     font: 0.85rem/1.2 sans-serif;
-    border-radius: 0.35rem;
-    pointer-events: none;
+    text-align: center;
+}
+
+.hud__buildings {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Sized well above the ~44px touch-target minimum so a placement tap can't miss. */
+.hud__button {
+    min-width: 4.5rem;
+    min-height: 3rem;
+    padding: 0.5rem 0.9rem;
+    font: 1rem/1.2 sans-serif;
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.hud__button--selected {
+    background: #1b6ec2;
+    border-color: #1b6ec2;
+    color: #fff;
 }
 
 /* Loading indicator styles (matches Blazor WASM template) */

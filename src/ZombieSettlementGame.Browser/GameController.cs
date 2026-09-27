@@ -64,12 +64,8 @@ public sealed class GameController
     /// NDC-filling size used before there was a camera.</summary>
     private const float TileWorldSize = 1f;
 
-    /// <summary>
-    /// Camera zoom that fits the <see cref="GridHeight"/>-tall grid vertically with a
-    /// one-tile margin: visible half-height is <c>1 / Zoom</c> world units (see
-    /// <see cref="Camera2D.ViewProjection"/>), so this gives <c>GridHeight / 2 + 1</c>.
-    /// </summary>
-    private const float CameraZoom = 1f / (GridHeight / 2f + 1f);
+    /// <summary>Empty world-unit margin kept visible around the grid on every side.</summary>
+    private const float CameraMargin = 1f;
 
     private static readonly Vector2 GroundOrigin = Vector2.Zero;
     private static readonly Vector2 GridCenter = new(GridWidth / 2f, GridHeight / 2f);
@@ -118,7 +114,33 @@ public sealed class GameController
         PlaceBuilding(BuildingKind.Fence, column: 7, row: 7, tag: "building-fence");
 
         var camera = _world.CreateEntity("camera");
-        _world.AddComponent(camera, new Camera2D(GridCenter, CameraZoom));
+        _world.AddComponent(camera, new Camera2D(GridCenter, ComputeCameraZoom(aspectRatio: 1f)));
+    }
+
+    /// <summary>
+    /// Zoom that fits the whole <see cref="GridWidth"/> x <see cref="GridHeight"/> grid plus a
+    /// <see cref="CameraMargin"/> margin inside the viewport on every side, whatever its
+    /// <paramref name="aspectRatio"/> — the narrower of a height-fit and a width-fit zoom (see
+    /// <see cref="Camera2D.ViewProjection"/> for how <c>Zoom</c> maps to visible half-extents).
+    /// A fixed height-only fit (the original approach) crops the left/right edges off-screen on
+    /// a portrait phone, where aspect ratio is well under 1.
+    /// </summary>
+    private static float ComputeCameraZoom(float aspectRatio)
+    {
+        var zoomForHeight = 1f / (GridHeight / 2f + CameraMargin);
+        var zoomForWidth = aspectRatio / (GridWidth / 2f + CameraMargin);
+        return MathF.Min(zoomForHeight, zoomForWidth);
+    }
+
+    /// <summary>Re-fits the camera's <see cref="Camera2D.Zoom"/> to the current viewport shape;
+    /// called once per tick since <paramref name="aspectRatio"/> can change (resize, rotation).</summary>
+    private void UpdateCameraZoom(float aspectRatio)
+    {
+        if (!TryGetCamera(out var camera))
+            return;
+
+        camera.Zoom = ComputeCameraZoom(aspectRatio);
+        _world.AddComponent(_world.GetEntity("camera"), camera);
     }
 
     /// <summary>
@@ -237,9 +259,19 @@ public sealed class GameController
     public void Tick(double timestampMs, double aspectRatio)
     {
         _timeSource.Advance(timestampMs);
+        UpdateCameraZoom((float)aspectRatio);
         HandlePlacementInput((float)aspectRatio);
         Render((float)aspectRatio);
     }
+
+    /// <summary>Which <see cref="BuildingKind"/> the next click/tap places; mirrors <see cref="_selectedKind"/>
+    /// for the host page's on-screen building picker (mobile has no 1/2/3 keys).</summary>
+    public BuildingKind SelectedKind => _selectedKind;
+
+    /// <summary>Sets which <see cref="BuildingKind"/> a click/tap places next. Called from the
+    /// host page's on-screen building picker buttons; the 1/2/3 keyboard shortcuts set the same
+    /// field directly in <see cref="HandlePlacementInput"/>.</summary>
+    public void SelectBuilding(BuildingKind kind) => _selectedKind = kind;
 
     private void Render(float aspectRatio)
     {

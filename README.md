@@ -38,10 +38,14 @@ dotnet build ZombieSettlementGame.slnx
 `src/ZombieSettlementGame.Browser` is a minimal Blazor WebAssembly host that boots the Yaeger
 engine and renders the settlement's ground plot: a 10x10 tilemap (grass interior, brick boundary
 wall) with three placed buildings — a farm, a house, and a fence, each a distinct entity with its
-own `BuildingKind` and sprite-sheet frame — viewed through a `Camera2D` that keeps tiles square
-regardless of the browser window's aspect ratio. Press **1**/**2**/**3** to choose a building
-type and click an empty grass cell to place it there; the click is mapped to a grid cell by
-inverting the camera's view-projection, so placement stays correct at any window size.
+own `BuildingKind` and sprite-sheet frame — viewed through a `Camera2D` whose zoom is recomputed
+every frame to fit the whole grid inside the viewport regardless of aspect ratio (letterboxed on
+wide windows, pillarboxed on tall/portrait phone screens). Tap or click a building button in the
+on-screen picker (or press **1**/**2**/**3** on a keyboard) to choose a building type, then tap
+or click an empty grass cell to place it there; both point and click are mapped to a grid cell by
+inverting the camera's view-projection, so placement stays correct at any window size. Touch input
+is handled by Yaeger's browser input layer, which maps pointer events (mouse, touch, and pen)
+into the same mouse-style state the placement logic reads.
 
 ```bash
 dotnet run --project src/ZombieSettlementGame.Browser/ZombieSettlementGame.Browser.csproj
