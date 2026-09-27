@@ -42,7 +42,11 @@ public static class SettlementRenderer
         }
 
         foreach (
-            var (_, building, sheet, transform) in world.Query<Building, SpriteSheet, Transform2D>()
+            var (entity, building, sheet, transform) in world.Query<
+                Building,
+                SpriteSheet,
+                Transform2D
+            >()
         )
         {
             var (uvMin, uvMax) = sheet.GetFrameUv(BuildingCatalog.FrameFor(building.Kind));
@@ -51,7 +55,7 @@ public static class SettlementRenderer
                 sheet.TexturePath,
                 uvMin,
                 uvMax,
-                sheet.Tint.ToVector4()
+                DamageTint(world, entity, sheet)
             );
         }
 
@@ -68,6 +72,25 @@ public static class SettlementRenderer
         }
 
         renderSurface.EndFrame();
+    }
+
+    /// <summary>A building's tint bleeds toward this the more damaged it is (see
+    /// <see cref="DamageTint"/>) — a cheap at-a-glance signal for which building needs
+    /// <see cref="BuildingRepair"/> most, since nothing else marks health on screen.</summary>
+    private static readonly Vector4 DamagedColor = new(0.85f, 0.1f, 0.1f, 1f);
+
+    /// <summary>Blends <paramref name="sheet"/>'s own tint toward <see cref="DamagedColor"/> in
+    /// proportion to how much of <paramref name="entity"/>'s <see cref="BuildingHealth"/> is
+    /// missing — full health renders unchanged, a building on its last hit point renders almost
+    /// entirely <see cref="DamagedColor"/>.</summary>
+    private static Vector4 DamageTint(World world, Entity entity, SpriteSheet sheet)
+    {
+        var tint = sheet.Tint.ToVector4();
+        if (!world.TryGetComponent<BuildingHealth>(entity, out var health) || health.Max <= 0)
+            return tint;
+
+        var missingFraction = 1f - (float)health.Current / health.Max;
+        return Vector4.Lerp(tint, DamagedColor, missingFraction);
     }
 
     /// <summary>

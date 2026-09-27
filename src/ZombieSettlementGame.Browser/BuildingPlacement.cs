@@ -110,11 +110,24 @@ public static class BuildingPlacement
 
     /// <summary>Whether grid cell (<paramref name="column"/>, <paramref name="row"/>) already has
     /// a building on it.</summary>
-    public static bool IsCellOccupied(World world, int column, int row)
+    public static bool IsCellOccupied(World world, int column, int row) =>
+        TryGetBuildingAt(world, column, row, out _);
+
+    /// <summary>Finds the building entity occupying grid cell (<paramref name="column"/>,
+    /// <paramref name="row"/>), if any — the shared lookup <see cref="IsCellOccupied"/> and
+    /// <see cref="BuildingRepair"/> both need.</summary>
+    public static bool TryGetBuildingAt(World world, int column, int row, out Entity entity)
     {
-        foreach (var (_, building, _) in world.Query<Building, Transform2D>())
-            if (building.Column == column && building.Row == row)
-                return true;
+        foreach (var (candidate, building, _) in world.Query<Building, Transform2D>())
+        {
+            if (building.Column != column || building.Row != row)
+                continue;
+
+            entity = candidate;
+            return true;
+        }
+
+        entity = default;
         return false;
     }
 }
