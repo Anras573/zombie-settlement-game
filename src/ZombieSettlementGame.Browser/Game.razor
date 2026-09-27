@@ -1,19 +1,24 @@
+@using System.Threading
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
 <canvas id="yaeger-canvas"></canvas>
 
 <div class="hud">
+    <div class="hud__resources" role="status" aria-label="Resources">
+        <span class="hud__resource"><span aria-hidden="true">🪵</span> @(_controller?.Wood ?? 0)</span>
+        <span class="hud__resource"><span aria-hidden="true">🌾</span> @(_controller?.Food ?? 0)</span>
+    </div>
     <p class="hud__hint">Tap a building, then tap the grid to place it. (Keys 1/2/3 also work.)</p>
     <div class="hud__buildings" role="group" aria-label="Choose building to place">
-        <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
-            <span aria-hidden="true">🌾</span> Farm
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm) @AffordClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
+            <span aria-hidden="true">🌾</span> Farm (@GameController.WoodCost(BuildingKind.Farm) 🪵)
         </button>
-        <button type="button" class="hud__button @SelectedClass(BuildingKind.House)" @onclick="() => SelectBuilding(BuildingKind.House)">
-            <span aria-hidden="true">🏠</span> House
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.House) @AffordClass(BuildingKind.House)" @onclick="() => SelectBuilding(BuildingKind.House)">
+            <span aria-hidden="true">🏠</span> House (@GameController.WoodCost(BuildingKind.House) 🪵)
         </button>
-        <button type="button" class="hud__button @SelectedClass(BuildingKind.Fence)" @onclick="() => SelectBuilding(BuildingKind.Fence)">
-            <span aria-hidden="true">🧱</span> Fence
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.Fence) @AffordClass(BuildingKind.Fence)" @onclick="() => SelectBuilding(BuildingKind.Fence)">
+            <span aria-hidden="true">🧱</span> Fence (@GameController.WoodCost(BuildingKind.Fence) 🪵)
         </button>
     </div>
 </div>
@@ -22,6 +27,12 @@
     private DotNetObjectReference<GameController>? _controllerRef;
     private BrowserRenderSurface? _renderSurface;
     private GameController? _controller;
+
+    // GameController's Wood/Food change every tick, driven by JS's requestAnimationFrame outside
+    // Blazor's own render cycle, so nothing tells this component to re-render on its own; poll it
+    // instead. Interval is cosmetic (resource HUD, not gameplay-critical) so a coarse refresh rate
+    // keeps StateHasChanged calls cheap.
+    private Timer? _hudRefreshTimer;
 
     // Mirrors GameController._selectedKind purely for highlighting the active button; the
     // keyboard shortcuts change the controller's selection directly without going through this
@@ -49,6 +60,8 @@
 
         // Hand a reference to the controller to the JS game loop pump.
         await JS.InvokeVoidAsync("startGameLoop", _controllerRef);
+
+        _hudRefreshTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, dueTime: 200, period: 200);
     }
 
     private void SelectBuilding(BuildingKind kind)
@@ -60,8 +73,14 @@
     private string SelectedClass(BuildingKind kind) =>
         kind == _selectedKind ? "hud__button--selected" : "";
 
+    private string AffordClass(BuildingKind kind) =>
+        _controller is not null && _controller.Wood < GameController.WoodCost(kind)
+            ? "hud__button--unaffordable"
+            : "";
+
     public async ValueTask DisposeAsync()
     {
+        _hudRefreshTimer?.Dispose();
         await JS.InvokeVoidAsync("stopGameLoop");
         _renderSurface?.Dispose();
         _controllerRef?.Dispose();

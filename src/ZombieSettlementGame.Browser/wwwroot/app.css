@@ -35,6 +35,17 @@ body {
     text-align: center;
 }
 
+.hud__resources {
+    display: flex;
+    gap: 1rem;
+}
+
+.hud__resource {
+    color: #e0e0e0;
+    font: 1.1rem/1.2 sans-serif;
+    font-weight: bold;
+}
+
 .hud__buildings {
     display: flex;
     gap: 0.5rem;
@@ -58,6 +69,10 @@ body {
     background: #1b6ec2;
     border-color: #1b6ec2;
     color: #fff;
+}
+
+.hud__button--unaffordable {
+    opacity: 0.45;
 }
 
 /* Loading indicator styles (matches Blazor WASM template) */
