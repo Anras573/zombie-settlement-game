@@ -2,11 +2,31 @@
 @implements IAsyncDisposable
 
 <canvas id="yaeger-canvas"></canvas>
-<p class="controls-hint">1: Farm &nbsp; 2: House &nbsp; 3: Fence &nbsp; — click the grid to place</p>
+
+<div class="hud">
+    <p class="hud__hint">Tap a building, then tap the grid to place it. (Keys 1/2/3 also work.)</p>
+    <div class="hud__buildings" role="group" aria-label="Choose building to place">
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
+            <span aria-hidden="true">🌾</span> Farm
+        </button>
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.House)" @onclick="() => SelectBuilding(BuildingKind.House)">
+            <span aria-hidden="true">🏠</span> House
+        </button>
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.Fence)" @onclick="() => SelectBuilding(BuildingKind.Fence)">
+            <span aria-hidden="true">🧱</span> Fence
+        </button>
+    </div>
+</div>
 
 @code {
     private DotNetObjectReference<GameController>? _controllerRef;
     private BrowserRenderSurface? _renderSurface;
+    private GameController? _controller;
+
+    // Mirrors GameController._selectedKind purely for highlighting the active button; the
+    // keyboard shortcuts change the controller's selection directly without going through this
+    // field, so it can lag behind if both input methods are mixed — cosmetic only.
+    private BuildingKind _selectedKind = BuildingKind.Farm;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -24,12 +44,21 @@
         _renderSurface = new BrowserRenderSurface("yaeger-canvas");
         _renderSurface.Initialize();
 
-        var controller = new GameController(_renderSurface);
-        _controllerRef = DotNetObjectReference.Create(controller);
+        _controller = new GameController(_renderSurface);
+        _controllerRef = DotNetObjectReference.Create(_controller);
 
         // Hand a reference to the controller to the JS game loop pump.
         await JS.InvokeVoidAsync("startGameLoop", _controllerRef);
     }
+
+    private void SelectBuilding(BuildingKind kind)
+    {
+        _controller?.SelectBuilding(kind);
+        _selectedKind = kind;
+    }
+
+    private string SelectedClass(BuildingKind kind) =>
+        kind == _selectedKind ? "hud__button--selected" : "";
 
     public async ValueTask DisposeAsync()
     {
