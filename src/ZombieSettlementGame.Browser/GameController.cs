@@ -26,6 +26,14 @@ public enum BuildingKind
 public readonly record struct Building(BuildingKind Kind, int Column, int Row);
 
 /// <summary>
+/// Marks a farm as harvesting food on a timer: every <see cref="IntervalSeconds"/> of accumulated
+/// <see cref="Elapsed"/> yields one unit of food. Only farms carry this component, so food
+/// production is driven purely by which buildings exist, matching the read-only-then-overwrite
+/// pattern components use throughout this file (see <see cref="GameController.UpdateFoodProduction"/>).
+/// </summary>
+public readonly record struct FoodProducer(float IntervalSeconds, float Elapsed);
+
+/// <summary>
 /// First real scene: a static ground tilemap plus a handful of placed buildings sitting on it,
 /// all drawn from the same Kenney sheet. Owns the ECS world and drives the game loop; each tick
 /// is invoked by JavaScript's <c>requestAnimationFrame</c> via <see cref="Tick"/>.
@@ -67,6 +75,17 @@ public sealed class GameController
     /// <summary>Empty world-unit margin kept visible around the grid on every side.</summary>
     private const float CameraMargin = 1f;
 
+    /// <summary>Wood the settlement starts with, before any player-placed building spends it. The
+    /// three starter buildings in <see cref="BuildScene"/> are free — this only budgets what the
+    /// player places afterward.</summary>
+    private const int StartingWood = 10;
+
+    /// <summary>Seconds a farm takes to harvest one unit of food.</summary>
+    private const float FoodProductionIntervalSeconds = 5f;
+
+    /// <summary>Food yielded by one farm harvest.</summary>
+    private const int FoodPerHarvest = 1;
+
     private static readonly Vector2 GroundOrigin = Vector2.Zero;
     private static readonly Vector2 GridCenter = new(GridWidth / 2f, GridHeight / 2f);
 
@@ -77,6 +96,14 @@ public sealed class GameController
 
     /// <summary>Which <see cref="BuildingKind"/> a click places next; chosen with the 1/2/3 keys.</summary>
     private BuildingKind _selectedKind = BuildingKind.Farm;
+
+    /// <summary>Wood in the settlement's stockpile, spent placing new buildings (see
+    /// <see cref="WoodCostFor"/>). The three starter buildings don't draw from this.</summary>
+    private int _wood = StartingWood;
+
+    /// <summary>Food harvested by farms so far (see <see cref="FoodProducer"/>); nothing consumes
+    /// it yet, so it's a running total rather than a resource that can run out.</summary>
+    private int _food;
 
     /// <summary>Left-mouse state from the previous tick, so a click places once, not once per
     /// frame the button is held.</summary>
@@ -162,6 +189,58 @@ public sealed class GameController
         );
         _world.AddComponent(building, new SpriteSheet(TileSheetPath, TileSheetColumns, TileSheetRows));
         _world.AddComponent(building, new Building(kind, column, row));
+
+        if (kind == BuildingKind.Farm)
+            _world.AddComponent(building, new FoodProducer(FoodProductionIntervalSeconds, Elapsed: 0f));
+    }
+
+    /// <summary>Wood spent placing one building of the given <paramref name="kind"/>.</summary>
+    private static int WoodCostFor(BuildingKind kind) =>
+        kind switch
+        {
+            BuildingKind.Farm => 3,
+            BuildingKind.House => 5,
+            BuildingKind.Fence => 2,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
+        };
+
+    /// <summary>
+    /// Spends the wood <see cref="WoodCostFor"/> a building of <paramref name="kind"/> and places
+    /// it at (<paramref name="column"/>, <paramref name="row"/>) — or does nothing and returns
+    /// <c>false</c> if the stockpile can't cover the cost, so placement is a real economy choice
+    /// rather than free.
+    /// </summary>
+    private bool TryPlaceBuilding(BuildingKind kind, int column, int row)
+    {
+        var cost = WoodCostFor(kind);
+        if (_wood < cost)
+            return false;
+
+        _wood -= cost;
+        PlaceBuilding(kind, column, row);
+        return true;
+    }
+
+    /// <summary>
+    /// Advances every farm's harvest timer by <paramref name="deltaTime"/>, crediting
+    /// <see cref="FoodPerHarvest"/> food to the stockpile each time a farm's accumulated
+    /// <see cref="FoodProducer.Elapsed"/> passes <see cref="FoodProducer.IntervalSeconds"/> — a
+    /// <c>while</c>, not an <c>if</c>, so a long stall (e.g. a backgrounded tab) still credits
+    /// every harvest it covers instead of losing the surplus.
+    /// </summary>
+    private void UpdateFoodProduction(float deltaTime)
+    {
+        foreach (var (entity, producer, _) in _world.Query<FoodProducer, Building>())
+        {
+            var elapsed = producer.Elapsed + deltaTime;
+            while (elapsed >= producer.IntervalSeconds)
+            {
+                elapsed -= producer.IntervalSeconds;
+                _food += FoodPerHarvest;
+            }
+
+            _world.AddComponent(entity, producer with { Elapsed = elapsed });
+        }
     }
 
     /// <summary>Whether grid cell (<paramref name="column"/>, <paramref name="row"/>) already has
@@ -237,7 +316,7 @@ public sealed class GameController
             && TryScreenToCell(camera, aspectRatio, _input.MousePositionNdc, out var column, out var row)
             && !IsCellOccupied(column, row)
         )
-            PlaceBuilding(_selectedKind, column, row);
+            TryPlaceBuilding(_selectedKind, column, row);
     }
 
     /// <summary>Sprite-sheet frame that represents each <see cref="BuildingKind"/>.</summary>
@@ -260,6 +339,7 @@ public sealed class GameController
     {
         _timeSource.Advance(timestampMs);
         UpdateCameraZoom((float)aspectRatio);
+        UpdateFoodProduction(_timeSource.DeltaTime);
         HandlePlacementInput((float)aspectRatio);
         Render((float)aspectRatio);
     }
@@ -272,6 +352,16 @@ public sealed class GameController
     /// host page's on-screen building picker buttons; the 1/2/3 keyboard shortcuts set the same
     /// field directly in <see cref="HandlePlacementInput"/>.</summary>
     public void SelectBuilding(BuildingKind kind) => _selectedKind = kind;
+
+    /// <summary>Wood currently in the stockpile; read by the host page's HUD.</summary>
+    public int Wood => _wood;
+
+    /// <summary>Food harvested so far; read by the host page's HUD.</summary>
+    public int Food => _food;
+
+    /// <summary>Wood a building of the given <paramref name="kind"/> costs to place; read by the
+    /// host page's HUD to grey out buttons the settlement can't currently afford.</summary>
+    public static int WoodCost(BuildingKind kind) => WoodCostFor(kind);
 
     private void Render(float aspectRatio)
     {
