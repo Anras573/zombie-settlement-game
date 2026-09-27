@@ -19,7 +19,13 @@ public static class BuildingPlacement
     /// lines up with the grid exactly one layer above the ground. Free — callers that need to
     /// charge wood for it go through <see cref="TryPlaceBuilding"/> instead.
     /// </summary>
-    public static void PlaceBuilding(World world, BuildingKind kind, int column, int row, string? tag = null)
+    public static void PlaceBuilding(
+        World world,
+        BuildingKind kind,
+        int column,
+        int row,
+        string? tag = null
+    )
     {
         var building = tag is null ? world.CreateEntity() : world.CreateEntity(tag);
         world.AddComponent(
@@ -31,8 +37,13 @@ public static class BuildingPlacement
                 scale: new Vector2(SettlementGrid.TileWorldSize, SettlementGrid.TileWorldSize)
             )
         );
-        world.AddComponent(building, new SpriteSheet(TileSheet.SheetPath, TileSheet.Columns, TileSheet.Rows));
+        world.AddComponent(
+            building,
+            new SpriteSheet(TileSheet.SheetPath, TileSheet.Columns, TileSheet.Rows)
+        );
         world.AddComponent(building, new Building(kind, column, row));
+        var maxHealth = BuildingCatalog.MaxHealthFor(kind);
+        world.AddComponent(building, new BuildingHealth(maxHealth, maxHealth));
 
         if (kind == BuildingKind.Farm)
             world.AddComponent(
@@ -70,7 +81,8 @@ public static class BuildingPlacement
     /// <summary>The sparse overlay tilemap forest tiles live on (see
     /// <see cref="SettlementScene.Build"/>) — separate from "ground" so grass shows through a tree
     /// sprite's transparent margins.</summary>
-    private static Tilemap GetForestTilemap(World world) => world.GetComponent<Tilemap>(world.GetEntity("forest"));
+    private static Tilemap GetForestTilemap(World world) =>
+        world.GetComponent<Tilemap>(world.GetEntity("forest"));
 
     /// <summary>Whether grid cell (<paramref name="column"/>, <paramref name="row"/>) is standing
     /// forest — never buildable itself (the trees are in the way), but what a sawmill needs to sit

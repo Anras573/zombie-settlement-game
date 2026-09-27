@@ -41,9 +41,23 @@ public static class SettlementRenderer
             RenderTilemap(renderSurface, tilemap, transform);
         }
 
-        foreach (var (_, building, sheet, transform) in world.Query<Building, SpriteSheet, Transform2D>())
+        foreach (
+            var (_, building, sheet, transform) in world.Query<Building, SpriteSheet, Transform2D>()
+        )
         {
             var (uvMin, uvMax) = sheet.GetFrameUv(BuildingCatalog.FrameFor(building.Kind));
+            renderSurface.SubmitQuad(
+                transform.TransformMatrix,
+                sheet.TexturePath,
+                uvMin,
+                uvMax,
+                sheet.Tint.ToVector4()
+            );
+        }
+
+        foreach (var (_, _, sheet, transform) in world.Query<Zombie, SpriteSheet, Transform2D>())
+        {
+            var (uvMin, uvMax) = sheet.GetFrameUv(ZombieCatalog.Frame);
             renderSurface.SubmitQuad(
                 transform.TransformMatrix,
                 sheet.TexturePath,
@@ -62,7 +76,11 @@ public static class SettlementRenderer
     /// isn't available here since its camera support pulls in <c>Yaeger</c>'s native/Silk.NET
     /// dependency, which the WASM build can't reference.
     /// </summary>
-    private static void RenderTilemap(BrowserRenderSurface renderSurface, Tilemap map, Transform2D transform)
+    private static void RenderTilemap(
+        BrowserRenderSurface renderSurface,
+        Tilemap map,
+        Transform2D transform
+    )
     {
         for (var row = 0; row < map.Height; row++)
         for (var column = 0; column < map.Width; column++)
