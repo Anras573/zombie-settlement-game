@@ -3,17 +3,20 @@ using Yaeger.Graphics;
 namespace ZombieSettlementGame.Browser;
 
 /// <summary>
-/// Rendering data for zombies. The sheet (see <see cref="TileSheet"/>) has no monster or character
-/// sprites — it's purely terrain, furniture, and dungeon dressing — so a zombie reuses one of its
-/// plant frames, darkened into a shambling shape via <see cref="Tint"/> rather than pulling in a
-/// whole second sprite sheet for one enemy.
+/// Rendering data for zombies. The terrain sheet (see <see cref="TileSheet"/>) has no monster or
+/// character sprites, so zombies are drawn from Kenney's "Roguelike Characters" pack
+/// (CC0, https://kenney.nl/assets/roguelike-characters) — a 16x16-tile sheet, 1px margin between
+/// tiles. See <c>wwwroot/assets/kenney/roguelike-characters/LICENSE.txt</c>.
 /// </summary>
 public static class ZombieCatalog
 {
-    /// <summary>Row 9, column 19 of the sheet: a round bush, otherwise bright green — tinted dark
-    /// and sickly by <see cref="Tint"/> to read as a shambling horde rather than foliage.</summary>
-    public const int Frame = 9 * TileSheet.Columns + 19;
+    public const string SheetPath = "assets/kenney/roguelike-characters/roguelikeChar_transparent.png";
+    public const int Columns = 54;
+    public const int Rows = 12;
 
-    /// <summary>Dulls the bush frame's usual bright green down to a sickly, corpse-like shade.</summary>
-    public static readonly Color Tint = new(70, 90, 60);
+    /// <summary>Row 3, column 0 of the sheet: a green-skinned, tusked brute.</summary>
+    public const int Frame = 3 * Columns;
+
+    /// <summary>The frame is already the right colour, so it's drawn untinted.</summary>
+    public static readonly Color Tint = Color.White;
 }

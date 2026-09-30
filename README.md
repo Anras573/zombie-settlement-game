@@ -69,7 +69,9 @@ Art comes from [Kenney](https://kenney.nl) (CC0 — free for any use, credit app
 required). Packs are vendored under `src/ZombieSettlementGame.Browser/wwwroot/assets/kenney/<pack>/`,
 each with its own `LICENSE.txt`. Currently in use: the
 [Roguelike/RPG pack](https://kenney.nl/assets/roguelike-rpg-pack), a single 16x16-tile sheet
-(57 columns × 31 rows, 1px margin) referenced via `Yaeger.Graphics.SpriteSheet` and `GetFrameUv`.
+(57 columns × 31 rows, 1px margin) referenced via `Yaeger.Graphics.SpriteSheet` and `GetFrameUv`,
+plus the [Roguelike Characters pack](https://kenney.nl/assets/roguelike-characters) (54 columns ×
+12 rows, 1px margin) for the zombies.
 
 ## Deployment
 
