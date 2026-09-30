@@ -13,7 +13,7 @@ namespace ZombieSettlementGame.Browser;
 /// threat, and rendering each live in their own type (<see cref="SettlementScene"/>,
 /// <see cref="BuildingPlacement"/>, <see cref="BuildingRepair"/>, <see cref="SettlementStockpile"/>,
 /// <see cref="SettlementCamera"/>, <see cref="PlacementController"/>, <see cref="ZombieController"/>,
-/// <see cref="SettlementRenderer"/>)
+/// <see cref="TowerController"/>, <see cref="SettlementRenderer"/>)
 /// — this class just wires them together each tick and exposes what the host Razor page needs.
 /// </summary>
 public sealed class GameController
@@ -25,6 +25,7 @@ public sealed class GameController
     private readonly SettlementStockpile _stockpile = new();
     private readonly PlacementController _placement = new();
     private readonly ZombieController _zombies = new();
+    private readonly TowerController _towers = new();
 
     public GameController(BrowserRenderSurface renderSurface)
     {
@@ -46,6 +47,7 @@ public sealed class GameController
         _stockpile.UpdateFoodProduction(_world, _timeSource.DeltaTime);
         _stockpile.UpdateWoodProduction(_world, _timeSource.DeltaTime);
         _zombies.Update(_world, _timeSource.DeltaTime);
+        _towers.Update(_world, _timeSource.DeltaTime);
         _placement.HandleInput(_world, _input, (float)aspectRatio, _stockpile);
         SettlementRenderer.Render(_world, _renderSurface, (float)aspectRatio);
     }

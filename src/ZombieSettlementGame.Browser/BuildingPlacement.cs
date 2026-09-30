@@ -55,6 +55,16 @@ public static class BuildingPlacement
                 building,
                 new WoodProducer(SettlementStockpile.WoodProductionIntervalSeconds, Elapsed: 0f)
             );
+        else if (kind == BuildingKind.Watchtower)
+            world.AddComponent(
+                building,
+                new Turret(
+                    BuildingCatalog.TowerRange,
+                    BuildingCatalog.TowerShotIntervalSeconds,
+                    BuildingCatalog.TowerDamage,
+                    Elapsed: 0f
+                )
+            );
     }
 
     /// <summary>

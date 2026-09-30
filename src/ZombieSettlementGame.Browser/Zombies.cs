@@ -8,3 +8,10 @@ namespace ZombieSettlementGame.Browser;
 /// pattern <see cref="FoodProducer.Elapsed"/> uses for a farm's harvest.
 /// </summary>
 public readonly record struct Zombie(float Speed, float AttackElapsed);
+
+/// <summary>
+/// A zombie's remaining/maximum hit points, the mirror of <see cref="BuildingHealth"/>: a
+/// <see cref="BuildingKind.Watchtower"/> whittles <see cref="Current"/> down (see
+/// <see cref="TowerController"/>) and the zombie is destroyed the moment it reaches zero.
+/// </summary>
+public readonly record struct ZombieHealth(int Current, int Max);

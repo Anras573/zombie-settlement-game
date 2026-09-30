@@ -21,6 +21,18 @@ public static class BuildingCatalog
     /// <summary>Row 22, column 53 of the sheet: a bundle of cut logs, representing a sawmill.</summary>
     private const int SawmillFrame = 22 * TileSheet.Columns + 53;
 
+    /// <summary>Row 16, column 51 of the sheet: a hooded sentry, representing a watchtower.</summary>
+    private const int WatchtowerFrame = 16 * TileSheet.Columns + 51;
+
+    /// <summary>World-unit radius a watchtower covers (3 grid cells).</summary>
+    public const float TowerRange = 3f * SettlementGrid.TileWorldSize;
+
+    /// <summary>Seconds between a watchtower's shots.</summary>
+    public const float TowerShotIntervalSeconds = 1f;
+
+    /// <summary>Hit points one watchtower shot removes from a zombie.</summary>
+    public const int TowerDamage = 1;
+
     /// <summary>Sprite-sheet frame that represents each <see cref="BuildingKind"/>.</summary>
     public static int FrameFor(BuildingKind kind) =>
         kind switch
@@ -29,6 +41,7 @@ public static class BuildingCatalog
             BuildingKind.House => HouseFrame,
             BuildingKind.Fence => FenceFrame,
             BuildingKind.Sawmill => SawmillFrame,
+            BuildingKind.Watchtower => WatchtowerFrame,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
         };
 
@@ -40,6 +53,7 @@ public static class BuildingCatalog
             BuildingKind.House => 5,
             BuildingKind.Fence => 2,
             BuildingKind.Sawmill => 4,
+            BuildingKind.Watchtower => 6,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
         };
 
@@ -55,6 +69,7 @@ public static class BuildingCatalog
             BuildingKind.House => 10,
             BuildingKind.Fence => 15,
             BuildingKind.Sawmill => 8,
+            BuildingKind.Watchtower => 12,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, message: null),
         };
 }

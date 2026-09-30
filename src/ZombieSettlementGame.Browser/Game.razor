@@ -10,7 +10,7 @@
         <span class="hud__resource"><span aria-hidden="true">🌾</span> @(_controller?.Food ?? 0)</span>
         <span class="hud__resource"><span aria-hidden="true">🧟</span> @(_controller?.ZombieCount ?? 0)</span>
     </div>
-    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. Zombies spawn at the walls and attack whichever building is nearest, tinting it red as it takes damage — switch to Repair and tap a damaged building to spend wood restoring it before it's destroyed. (Keys 1/2/3/4 and R also work.)</p>
+    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. Zombies spawn at the walls and attack whichever building is nearest, tinting it red as it takes damage — switch to Repair and tap a damaged building to spend wood restoring it before it's destroyed. Watchtowers automatically shoot zombies within 3 cells. (Keys 1/2/3/4 and R also work for the first four buildings and Repair.)</p>
     <div class="hud__buildings" role="group" aria-label="Choose building to place">
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm) @AffordClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
             <span aria-hidden="true">🌾</span> Farm (@GameController.WoodCost(BuildingKind.Farm) 🪵)
@@ -23,6 +23,9 @@
         </button>
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Sawmill) @AffordClass(BuildingKind.Sawmill)" @onclick="() => SelectBuilding(BuildingKind.Sawmill)">
             <span aria-hidden="true">🪚</span> Sawmill (@GameController.WoodCost(BuildingKind.Sawmill) 🪵)
+        </button>
+        <button type="button" class="hud__button @SelectedClass(BuildingKind.Watchtower) @AffordClass(BuildingKind.Watchtower)" @onclick="() => SelectBuilding(BuildingKind.Watchtower)">
+            <span aria-hidden="true">🗼</span> Watchtower (@GameController.WoodCost(BuildingKind.Watchtower) 🪵)
         </button>
         <button type="button" class="hud__button @RepairSelectedClass() @RepairAffordClass()" @onclick="SelectRepairMode">
             <span aria-hidden="true">🔨</span> Repair (@GameController.RepairWoodCost 🪵)
