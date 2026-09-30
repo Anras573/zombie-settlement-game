@@ -75,9 +75,9 @@ public sealed class ZombieController
         world.AddComponent(
             zombie,
             new SpriteSheet(
-                TileSheet.SheetPath,
-                TileSheet.Columns,
-                TileSheet.Rows,
+                ZombieCatalog.SheetPath,
+                ZombieCatalog.Columns,
+                ZombieCatalog.Rows,
                 tint: ZombieCatalog.Tint
             )
         );
