@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace ZombieSettlementGame.Browser;
 
 /// <summary>The settlement's placeable building types.</summary>
@@ -41,6 +43,13 @@ public readonly record struct WoodProducer(float IntervalSeconds, float Elapsed)
 /// <see cref="TowerController"/>).
 /// </summary>
 public readonly record struct Turret(float Range, float IntervalSeconds, int Damage, float Elapsed);
+
+/// <summary>
+/// A short-lived line from a watchtower to the zombie it just shot, drawn by
+/// <see cref="SettlementRenderer"/> until <see cref="Remaining"/> seconds run out (see
+/// <see cref="TowerController"/>).
+/// </summary>
+public readonly record struct ShotFlash(Vector2 From, Vector2 To, float Remaining);
 
 /// <summary>
 /// A building's remaining/maximum hit points. Every placed building carries one (see
