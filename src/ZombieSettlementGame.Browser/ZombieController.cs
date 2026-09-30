@@ -11,8 +11,9 @@ namespace ZombieSettlementGame.Browser;
 /// same accumulate-and-carry-over timing <see cref="SettlementStockpile"/> uses for farm/sawmill
 /// production — until its <see cref="BuildingHealth.Current"/> reaches zero, destroying it and
 /// freeing its cell for the player to rebuild. There is no way yet for the player to fight back
-/// directly; since a zombie always attacks whichever building is nearest, a ring of
-/// <see cref="BuildingKind.Fence"/> around the settlement is the only defense.
+/// directly; instead <see cref="BuildingKind.Watchtower"/>s shoot them (see
+/// <see cref="TowerController"/>), and since a zombie always attacks whichever building is nearest,
+/// a ring of <see cref="BuildingKind.Fence"/> keeps them in the towers' line of fire.
 /// </summary>
 public sealed class ZombieController
 {
@@ -31,6 +32,9 @@ public sealed class ZombieController
     /// <summary>How close (world units, same scale as <see cref="SettlementGrid.TileWorldSize"/>) a
     /// zombie must get to a building's centre before it stops walking and starts attacking.</summary>
     private const float AttackRange = 0.6f;
+
+    /// <summary>Hit points a freshly spawned zombie has; see <see cref="TowerController"/>.</summary>
+    private const int MaxHealth = 3;
 
     private readonly Random _random = new();
     private float _spawnElapsed;
@@ -82,6 +86,7 @@ public sealed class ZombieController
             )
         );
         world.AddComponent(zombie, new Zombie(Speed, AttackElapsed: 0f));
+        world.AddComponent(zombie, new ZombieHealth(MaxHealth, MaxHealth));
     }
 
     /// <summary>Picks a random cell on the grid's outermost ring — the boundary wall, outside where

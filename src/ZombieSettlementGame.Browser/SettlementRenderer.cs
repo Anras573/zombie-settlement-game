@@ -59,7 +59,9 @@ public static class SettlementRenderer
             );
         }
 
-        foreach (var (_, _, sheet, transform) in world.Query<Zombie, SpriteSheet, Transform2D>())
+        foreach (
+            var (entity, _, sheet, transform) in world.Query<Zombie, SpriteSheet, Transform2D>()
+        )
         {
             var (uvMin, uvMax) = sheet.GetFrameUv(ZombieCatalog.Frame);
             renderSurface.SubmitQuad(
@@ -67,7 +69,7 @@ public static class SettlementRenderer
                 sheet.TexturePath,
                 uvMin,
                 uvMax,
-                sheet.Tint.ToVector4()
+                ZombieDamageTint(world, entity, sheet)
             );
         }
 
@@ -87,6 +89,18 @@ public static class SettlementRenderer
     {
         var tint = sheet.Tint.ToVector4();
         if (!world.TryGetComponent<BuildingHealth>(entity, out var health) || health.Max <= 0)
+            return tint;
+
+        var missingFraction = 1f - (float)health.Current / health.Max;
+        return Vector4.Lerp(tint, DamagedColor, missingFraction);
+    }
+
+    /// <summary>Like <see cref="DamageTint"/> but for a zombie's <see cref="ZombieHealth"/>, so a
+    /// tower's hits are visible on the zombie it's wearing down.</summary>
+    private static Vector4 ZombieDamageTint(World world, Entity entity, SpriteSheet sheet)
+    {
+        var tint = sheet.Tint.ToVector4();
+        if (!world.TryGetComponent<ZombieHealth>(entity, out var health) || health.Max <= 0)
             return tint;
 
         var missingFraction = 1f - (float)health.Current / health.Max;

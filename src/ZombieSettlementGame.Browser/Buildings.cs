@@ -7,6 +7,7 @@ public enum BuildingKind
     House,
     Fence,
     Sawmill,
+    Watchtower,
 }
 
 /// <summary>
@@ -32,6 +33,14 @@ public readonly record struct FoodProducer(float IntervalSeconds, float Elapsed)
 /// "resource producer" since only two kinds exist and each already reads clearly on its own.
 /// </summary>
 public readonly record struct WoodProducer(float IntervalSeconds, float Elapsed);
+
+/// <summary>
+/// Marks a watchtower as shooting the nearest zombie within <see cref="Range"/> world units once
+/// per <see cref="IntervalSeconds"/> of accumulated <see cref="Elapsed"/>, for <see cref="Damage"/>
+/// hit points — the same timer shape as <see cref="FoodProducer"/> (see
+/// <see cref="TowerController"/>).
+/// </summary>
+public readonly record struct Turret(float Range, float IntervalSeconds, int Damage, float Elapsed);
 
 /// <summary>
 /// A building's remaining/maximum hit points. Every placed building carries one (see
