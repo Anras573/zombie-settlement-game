@@ -54,8 +54,8 @@ more damaged it is, giving an at-a-glance warning before it's lost. Tap or click
 button (or press **R**) to switch the next tap/click into a repair action instead of a placement:
 tapping a damaged building spends a little wood to patch it back up, buying time before the horde
 finishes it off. To actually thin the horde, build a **Watchtower**: zombies have hit points, and
-each watchtower automatically shoots the nearest zombie within 3 cells once a second, tinting it
-red as it weakens and destroying it at zero. Repairing isn't free, though, so a ring of fences around the settlement's
+each watchtower (key **5**) automatically shoots the nearest zombie within 3 cells once a second,
+flashing a shot line and tinting the zombie red as it weakens and destroying it at zero. Repairing isn't free, though, so a ring of fences around the settlement's
 perimeter (the sturdiest building) is still the front line: since zombies always go for the nearest
 target, fences take the brunt of the horde before farms, houses, or sawmills ever do.
 

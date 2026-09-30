@@ -14,14 +14,14 @@ public sealed class PlacementController
 {
     /// <summary>Whether a click places a new building or repairs the one already on the clicked
     /// cell — toggled by the <b>R</b> key or the host page's Repair button; picking a building
-    /// kind (a 1/2/3/4 key or the picker) switches back to <see cref="Mode.Build"/>.</summary>
+    /// kind (a 1/2/3/4/5 key or the picker) switches back to <see cref="Mode.Build"/>.</summary>
     private enum Mode
     {
         Build,
         Repair,
     }
 
-    /// <summary>Which <see cref="BuildingKind"/> a click places next; chosen with the 1/2/3/4 keys
+    /// <summary>Which <see cref="BuildingKind"/> a click places next; chosen with the 1/2/3/4/5 keys
     /// or the host page's on-screen building picker.</summary>
     private BuildingKind _selectedKind = BuildingKind.Farm;
 
@@ -42,7 +42,7 @@ public sealed class PlacementController
 
     /// <summary>Sets which <see cref="BuildingKind"/> a click/tap places next, and switches back
     /// to placing (out of repair mode). Called from the host page's on-screen building picker
-    /// buttons; the 1/2/3/4 keyboard shortcuts do the same directly in <see cref="HandleInput"/>.</summary>
+    /// buttons; the 1/2/3/4/5 keyboard shortcuts do the same directly in <see cref="HandleInput"/>.</summary>
     public void SelectBuilding(BuildingKind kind)
     {
         _selectedKind = kind;
@@ -55,7 +55,7 @@ public sealed class PlacementController
     public void SelectRepairMode() => _mode = Mode.Repair;
 
     /// <summary>
-    /// Reads the 1/2/3/4 keys to change which <see cref="BuildingKind"/> a click places and the
+    /// Reads the 1/2/3/4/5 keys to change which <see cref="BuildingKind"/> a click places and the
     /// <b>R</b> key to switch to repairing instead, then acts on a left click over the grid —
     /// edge-detected against <see cref="_wasPlacePressed"/> so a held button acts once, not every
     /// tick. In <see cref="Mode.Build"/> a click places <see cref="_selectedKind"/> on an empty
@@ -78,6 +78,8 @@ public sealed class PlacementController
             SelectBuilding(BuildingKind.Fence);
         else if (input.IsKeyPressed(Keys.Num4))
             SelectBuilding(BuildingKind.Sawmill);
+        else if (input.IsKeyPressed(Keys.Num5))
+            SelectBuilding(BuildingKind.Watchtower);
         else if (input.IsKeyPressed(Keys.R))
             SelectRepairMode();
 

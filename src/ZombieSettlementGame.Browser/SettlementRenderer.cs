@@ -2,6 +2,7 @@ using System.Numerics;
 using Yaeger.Browser;
 using Yaeger.ECS;
 using Yaeger.Graphics;
+using Yaeger.Platform;
 
 namespace ZombieSettlementGame.Browser;
 
@@ -73,8 +74,21 @@ public static class SettlementRenderer
             );
         }
 
+        foreach (var (_, shot, _) in world.Query<ShotFlash, Transform2D>())
+            ((IRenderSurface)renderSurface).SubmitLine(
+                shot.From,
+                shot.To,
+                ShotThickness,
+                ShotColor
+            );
+
         renderSurface.EndFrame();
     }
+
+    /// <summary>World-unit width and colour of a watchtower's shot line.</summary>
+    private const float ShotThickness = 0.06f;
+
+    private static readonly Vector4 ShotColor = new(1f, 0.9f, 0.3f, 1f);
 
     /// <summary>A building's tint bleeds toward this the more damaged it is (see
     /// <see cref="DamageTint"/>) — a cheap at-a-glance signal for which building needs

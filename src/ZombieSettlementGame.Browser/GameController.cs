@@ -57,7 +57,7 @@ public sealed class GameController
     public BuildingKind SelectedKind => _placement.SelectedKind;
 
     /// <summary>Sets which <see cref="BuildingKind"/> a click/tap places next. Called from the
-    /// host page's on-screen building picker buttons; the 1/2/3/4 keyboard shortcuts set the same
+    /// host page's on-screen building picker buttons; the 1/2/3/4/5 keyboard shortcuts set the same
     /// selection directly in <see cref="PlacementController.HandleInput"/>.</summary>
     public void SelectBuilding(BuildingKind kind) => _placement.SelectBuilding(kind);
 
