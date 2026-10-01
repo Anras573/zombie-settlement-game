@@ -12,7 +12,7 @@ namespace ZombieSettlementGame.Browser;
 /// itself, placement rules, repairs, the resource economy, the camera, input handling, the zombie
 /// threat, and rendering each live in their own type (<see cref="SettlementScene"/>,
 /// <see cref="BuildingPlacement"/>, <see cref="BuildingRepair"/>, <see cref="SettlementStockpile"/>,
-/// <see cref="SettlementCamera"/>, <see cref="PlacementController"/>, <see cref="ZombieController"/>,
+/// <see cref="SettlementPopulation"/>, <see cref="SettlementCamera"/>, <see cref="PlacementController"/>, <see cref="ZombieController"/>,
 /// <see cref="TowerController"/>, <see cref="SettlementRenderer"/>)
 /// — this class just wires them together each tick and exposes what the host Razor page needs.
 /// </summary>
@@ -23,6 +23,7 @@ public sealed class GameController
     private readonly BrowserTimeSource _timeSource = new();
     private readonly IInputState _input = new BrowserInputState();
     private readonly SettlementStockpile _stockpile = new();
+    private readonly SettlementPopulation _population = new();
     private readonly PlacementController _placement = new();
     private readonly ZombieController _zombies = new();
     private readonly TowerController _towers = new();
@@ -46,6 +47,7 @@ public sealed class GameController
         SettlementCamera.UpdateZoom(_world, (float)aspectRatio);
         _stockpile.UpdateFoodProduction(_world, _timeSource.DeltaTime);
         _stockpile.UpdateWoodProduction(_world, _timeSource.DeltaTime);
+        _population.Update(_world, _stockpile, _timeSource.DeltaTime);
         _zombies.Update(_world, _timeSource.DeltaTime);
         _towers.Update(_world, _timeSource.DeltaTime);
         _placement.HandleInput(_world, _input, (float)aspectRatio, _stockpile);
@@ -76,8 +78,18 @@ public sealed class GameController
     /// <summary>Wood currently in the stockpile; read by the host page's HUD.</summary>
     public int Wood => _stockpile.Wood;
 
-    /// <summary>Food harvested so far; read by the host page's HUD.</summary>
+    /// <summary>Food currently in the stockpile; read by the host page's HUD.</summary>
     public int Food => _stockpile.Food;
+
+    /// <summary>Residents currently living in the settlement; read by the host page's HUD.</summary>
+    public int Residents => _population.Residents;
+
+    /// <summary>Residents the settlement's houses can shelter; read by the host page's HUD.</summary>
+    public int PopulationCapacity => _population.Capacity(_world);
+
+    /// <summary>Food gained or lost per second at the current farms and residents; read by the
+    /// host page's HUD.</summary>
+    public float NetFoodPerSecond => _population.NetFoodPerSecond(_world);
 
     /// <summary>Zombies currently alive on the grid; read by the host page's HUD.</summary>
     public int ZombieCount => _world.GetStore<Zombie>().Count;

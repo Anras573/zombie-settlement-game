@@ -7,10 +7,11 @@
 <div class="hud">
     <div class="hud__resources" role="status" aria-label="Resources">
         <span class="hud__resource"><span aria-hidden="true">🪵</span> @(_controller?.Wood ?? 0)</span>
-        <span class="hud__resource"><span aria-hidden="true">🌾</span> @(_controller?.Food ?? 0)</span>
+        <span class="hud__resource"><span aria-hidden="true">🌾</span> @(_controller?.Food ?? 0) <small>@FoodRateText()</small></span>
+        <span class="hud__resource" title="Residents / house capacity"><span aria-hidden="true">👥</span> @(_controller?.Residents ?? 0)/@(_controller?.PopulationCapacity ?? 0)</span>
         <span class="hud__resource"><span aria-hidden="true">🧟</span> @(_controller?.ZombieCount ?? 0)</span>
     </div>
-    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. Zombies spawn at the walls and attack whichever building is nearest, tinting it red as it takes damage — switch to Repair and tap a damaged building to spend wood restoring it before it's destroyed. Watchtowers automatically shoot zombies within 3 cells. (Keys 1/2/3/4/5 and R also work.)</p>
+    <p class="hud__hint">Tap a building, then tap the grid to place it. Sawmills must go next to trees. Zombies spawn at the walls and attack whichever building is nearest, tinting it red as it takes damage — switch to Repair and tap a damaged building to spend wood restoring it before it's destroyed. Houses shelter residents, who eat food — keep farms running or they leave. Watchtowers automatically shoot zombies within 3 cells. (Keys 1/2/3/4/5 and R also work.)</p>
     <div class="hud__buildings" role="group" aria-label="Choose building to place">
         <button type="button" class="hud__button @SelectedClass(BuildingKind.Farm) @AffordClass(BuildingKind.Farm)" @onclick="() => SelectBuilding(BuildingKind.Farm)">
             <span aria-hidden="true">🌾</span> Farm (@GameController.WoodCost(BuildingKind.Farm) 🪵)
@@ -47,6 +48,9 @@
     // Mirrors GameController._selectedKind purely for highlighting the active button; the
     // keyboard shortcuts change the controller's selection directly without going through this
     // field, so it can lag behind if both input methods are mixed — cosmetic only.
+    private string FoodRateText() =>
+        _controller is null ? "" : $"({_controller.NetFoodPerSecond:+0.0;-0.0;+0.0}/s)";
+
     private BuildingKind _selectedKind = BuildingKind.Farm;
 
     // Mirrors GameController.IsRepairMode for the same reason and with the same caveat.
