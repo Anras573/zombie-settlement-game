@@ -47,6 +47,11 @@ inverting the camera's view-projection, so placement stays correct at any window
 is handled by Yaeger's browser input layer, which maps pointer events (mouse, touch, and pen)
 into the same mouse-style state the placement logic reads.
 
+Each house shelters up to two residents, who move in over time while there's room and food and
+eat one food each every 10 seconds; farms (one food per 5 seconds) keep them fed. If the stockpile
+runs dry a resident leaves per missed meal, and a destroyed house takes its residents with it. The
+HUD shows food with its net rate, plus residents out of house capacity.
+
 Every placed building carries hit points. On a timer, a zombie spawns on the grid's boundary
 ring and walks in a straight line toward whichever building is nearest, then attacks it until it's
 destroyed — freeing its cell for the player to rebuild. A building under attack tints redder the

@@ -1,11 +1,12 @@
+using System;
 using Yaeger.ECS;
 
 namespace ZombieSettlementGame.Browser;
 
 /// <summary>
 /// The settlement's wood and food stockpile: starting wood, what farms and sawmills harvest over
-/// time, and what a placed building spends. Wood can run out (see <see cref="TrySpendWood"/>);
-/// nothing consumes food yet, so it's a running total.
+/// time, and what a placed building spends. Wood can run out (see <see cref="TrySpendWood"/>), and
+/// so can food, which the settlement's residents eat (see <see cref="SettlementPopulation"/>).
 /// </summary>
 public sealed class SettlementStockpile
 {
@@ -13,6 +14,10 @@ public sealed class SettlementStockpile
     /// three starter buildings in <see cref="SettlementScene.Build"/> are free — this only budgets
     /// what the player places afterward.</summary>
     private const int StartingWood = 10;
+
+    /// <summary>Food the settlement starts with, enough to feed the first residents until a farm
+    /// harvests.</summary>
+    private const int StartingFood = 5;
 
     /// <summary>Seconds a farm takes to harvest one unit of food.</summary>
     public const float FoodProductionIntervalSeconds = 5f;
@@ -30,14 +35,14 @@ public sealed class SettlementStockpile
     /// <see cref="TrySpendWood"/>). The three starter buildings don't draw from this.</summary>
     private int _wood = StartingWood;
 
-    /// <summary>Food harvested by farms so far (see <see cref="FoodProducer"/>); nothing consumes
-    /// it yet, so it's a running total rather than a resource that can run out.</summary>
-    private int _food;
+    /// <summary>Food in the stockpile: harvested by farms (see <see cref="FoodProducer"/>) and
+    /// eaten by residents (see <see cref="ConsumeFood"/>).</summary>
+    private int _food = StartingFood;
 
     /// <summary>Wood currently in the stockpile; read by the host page's HUD.</summary>
     public int Wood => _wood;
 
-    /// <summary>Food harvested so far; read by the host page's HUD.</summary>
+    /// <summary>Food currently in the stockpile; read by the host page's HUD.</summary>
     public int Food => _food;
 
     /// <summary>Deducts <paramref name="cost"/> wood if the stockpile can cover it. Returns
@@ -49,6 +54,15 @@ public sealed class SettlementStockpile
 
         _wood -= cost;
         return true;
+    }
+
+    /// <summary>Eats up to <paramref name="amount"/> food and returns how much was actually eaten —
+    /// less than asked if the stockpile ran dry.</summary>
+    public int ConsumeFood(int amount)
+    {
+        var eaten = Math.Min(_food, amount);
+        _food -= eaten;
+        return eaten;
     }
 
     /// <summary>
