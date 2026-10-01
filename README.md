@@ -52,6 +52,10 @@ eat one food each every 10 seconds; farms (one food per 5 seconds) keep them fed
 runs dry a resident leaves per missed meal, and a destroyed house takes its residents with it. The
 HUD shows food with its net rate, plus residents out of house capacity.
 
+The game is lost once the zombies destroy every house, or once the settlement has had residents
+and they've all left because the food ran out; a game-over screen shows how long you survived, and
+**Play again** (or **Space**) starts a fresh settlement.
+
 Every placed building carries hit points. On a timer, a zombie spawns on the grid's boundary
 ring and walks in a straight line toward whichever building is nearest, then attacks it until it's
 destroyed — freeing its cell for the player to rebuild. A building under attack tints redder the

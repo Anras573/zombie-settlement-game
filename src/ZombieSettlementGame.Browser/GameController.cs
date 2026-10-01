@@ -1,6 +1,7 @@
 using Microsoft.JSInterop;
 using Yaeger.Browser;
 using Yaeger.ECS;
+using Yaeger.Input;
 using Yaeger.Platform;
 
 namespace ZombieSettlementGame.Browser;
@@ -18,21 +19,58 @@ namespace ZombieSettlementGame.Browser;
 /// </summary>
 public sealed class GameController
 {
-    private readonly World _world;
     private readonly BrowserRenderSurface _renderSurface;
     private readonly BrowserTimeSource _timeSource = new();
     private readonly IInputState _input = new BrowserInputState();
-    private readonly SettlementStockpile _stockpile = new();
-    private readonly SettlementPopulation _population = new();
-    private readonly PlacementController _placement = new();
-    private readonly ZombieController _zombies = new();
-    private readonly TowerController _towers = new();
+
+    // Everything below is per-run state, replaced wholesale by Restart.
+    private World _world = new();
+    private SettlementStockpile _stockpile = new();
+    private SettlementPopulation _population = new();
+    private PlacementController _placement = new();
+    private ZombieController _zombies = new();
+    private TowerController _towers = new();
+    private float _survivedSeconds;
 
     public GameController(BrowserRenderSurface renderSurface)
     {
         _renderSurface = renderSurface;
-        _world = new World();
         SettlementScene.Build(_world);
+    }
+
+    /// <summary>Why the game ended, or <see cref="GameOverReason.None"/> while it's running;
+    /// read by the host page to show the game-over overlay.</summary>
+    public GameOverReason GameOver { get; private set; }
+
+    /// <summary>Seconds the settlement has survived this run; frozen once the game is over.</summary>
+    public float SurvivedSeconds => _survivedSeconds;
+
+    /// <summary>Throws away the finished run and starts a fresh settlement. Called from the host
+    /// page's Play again button; <b>Space</b> does the same from <see cref="Tick"/>.</summary>
+    public void Restart()
+    {
+        _world = new World();
+        _stockpile = new SettlementStockpile();
+        _population = new SettlementPopulation();
+        _placement = new PlacementController();
+        _zombies = new ZombieController();
+        _towers = new TowerController();
+        _survivedSeconds = 0f;
+        GameOver = GameOverReason.None;
+        SettlementScene.Build(_world);
+    }
+
+    /// <summary>Game over once no house is left standing, or once the settlement had residents and
+    /// every one of them has left (starved) — a settlement still waiting on its first newcomer
+    /// isn't lost.</summary>
+    private GameOverReason CheckGameOver()
+    {
+        if (SettlementPopulation.HouseCount(_world) == 0)
+            return GameOverReason.HousesDestroyed;
+
+        return _population.HasHadResidents && _population.Residents == 0
+            ? GameOverReason.Starved
+            : GameOverReason.None;
     }
 
     /// <summary>
@@ -44,13 +82,23 @@ public sealed class GameController
     public void Tick(double timestampMs, double aspectRatio)
     {
         _timeSource.Advance(timestampMs);
+        if (GameOver != GameOverReason.None && _input.IsKeyPressed(Keys.Space))
+            Restart();
+
         SettlementCamera.UpdateZoom(_world, (float)aspectRatio);
-        _stockpile.UpdateFoodProduction(_world, _timeSource.DeltaTime);
-        _stockpile.UpdateWoodProduction(_world, _timeSource.DeltaTime);
-        _population.Update(_world, _stockpile, _timeSource.DeltaTime);
-        _zombies.Update(_world, _timeSource.DeltaTime);
-        _towers.Update(_world, _timeSource.DeltaTime);
-        _placement.HandleInput(_world, _input, (float)aspectRatio, _stockpile);
+        if (GameOver == GameOverReason.None)
+        {
+            var deltaTime = _timeSource.DeltaTime;
+            _survivedSeconds += deltaTime;
+            _stockpile.UpdateFoodProduction(_world, deltaTime);
+            _stockpile.UpdateWoodProduction(_world, deltaTime);
+            _population.Update(_world, _stockpile, deltaTime);
+            _zombies.Update(_world, deltaTime);
+            _towers.Update(_world, deltaTime);
+            _placement.HandleInput(_world, _input, (float)aspectRatio, _stockpile);
+            GameOver = CheckGameOver();
+        }
+
         SettlementRenderer.Render(_world, _renderSurface, (float)aspectRatio);
     }
 

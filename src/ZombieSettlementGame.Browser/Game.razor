@@ -4,6 +4,16 @@
 
 <canvas id="yaeger-canvas"></canvas>
 
+@if (_controller is { GameOver: not GameOverReason.None })
+{
+    <div class="gameover" role="alertdialog" aria-labelledby="gameover-title">
+        <h2 id="gameover-title" class="gameover__title">Game over</h2>
+        <p class="gameover__reason">@GameOverText()</p>
+        <p class="gameover__stats">You survived @FormatSurvived()</p>
+        <button type="button" class="hud__button hud__button--selected" @onclick="Restart">Play again (Space)</button>
+    </div>
+}
+
 <div class="hud">
     <div class="hud__resources" role="status" aria-label="Resources">
         <span class="hud__resource"><span aria-hidden="true">🪵</span> @(_controller?.Wood ?? 0)</span>
@@ -79,6 +89,27 @@
         await JS.InvokeVoidAsync("startGameLoop", _controllerRef);
 
         _hudRefreshTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, dueTime: 200, period: 200);
+    }
+
+    private void Restart()
+    {
+        _controller?.Restart();
+        _selectedKind = BuildingKind.Farm;
+        _isRepairMode = false;
+    }
+
+    private string GameOverText() =>
+        _controller?.GameOver switch
+        {
+            GameOverReason.HousesDestroyed => "The zombies destroyed every house.",
+            GameOverReason.Starved => "Everyone left — the settlement ran out of food.",
+            _ => "",
+        };
+
+    private string FormatSurvived()
+    {
+        var total = (int)(_controller?.SurvivedSeconds ?? 0f);
+        return $"{total / 60}:{total % 60:00}";
     }
 
     private void SelectBuilding(BuildingKind kind)
