@@ -26,20 +26,29 @@ public sealed class SettlementPopulation
     private float _arrivalElapsed;
     private float _mealElapsed;
     private int _residents;
+    private bool _hasHadResidents;
 
     /// <summary>Residents currently living in the settlement; read by the host page's HUD.</summary>
     public int Residents => _residents;
 
-    /// <summary>Total residents the settlement's houses can shelter right now.</summary>
-    public int Capacity(World world)
+    /// <summary>Whether anyone has ever lived here — what separates a settlement that starved
+    /// from one still waiting on its first newcomer (see <see cref="GameController"/>'s
+    /// game-over check).</summary>
+    public bool HasHadResidents => _hasHadResidents;
+
+    /// <summary>Houses currently standing.</summary>
+    public static int HouseCount(World world)
     {
         var houses = 0;
         foreach (var (_, building, _) in world.Query<Building, BuildingHealth>())
             if (building.Kind == BuildingKind.House)
                 houses++;
 
-        return houses * ResidentsPerHouse;
+        return houses;
     }
+
+    /// <summary>Total residents the settlement's houses can shelter right now.</summary>
+    public int Capacity(World world) => HouseCount(world) * ResidentsPerHouse;
 
     /// <summary>Food gained (positive) or lost (negative) per second at the current number of
     /// farms and residents; read by the host page's HUD.</summary>
@@ -73,6 +82,7 @@ public sealed class SettlementPopulation
             {
                 _arrivalElapsed -= ArrivalIntervalSeconds;
                 _residents++;
+                _hasHadResidents = true;
             }
         }
         else
